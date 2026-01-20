@@ -1,0 +1,1752 @@
+/**
+ * Jest-inspired mocking utility for Apex unit tests.
+ * Provides a fluent API for creating, configuring, and verifying mock objects.
+ *
+ * @example
+ * IService mock = (IService) Mock.of(IService.class);
+ * Mock.spyOn(mock, 'doWork').mockReturnValue('Success');
+ * Mock.expect(mock).toHaveBeenCalled('doWork');
+ */
+public class Mock {
+    private static final Map<Object, MockProvider> PROVIDERS = new Map<Object, MockProvider>();
+    private static Integer fakeIdCount = 0;
+
+    /**
+     * Creates a named mock instance for better identification in error messages.
+     * @param type The interface or class type to mock
+     * @param mockName Name used in assertion failure messages
+     * @return A mock instance
+     */
+    public static Object of(Type type, String mockName) {
+        MockProvider provider = new MockProvider(mockName);
+        Object stub = Test.createStub(type, provider);
+        PROVIDERS.put(stub, provider);
+        return stub;
+    }
+
+    /**
+     * Creates a mock instance of the specified type.
+     * @param type The interface or class type to mock
+     * @return A mock instance
+     * @example
+     * IService mock = (IService) Mock.of(IService.class);
+     */
+    public static Object of(Type type) {
+        return of(type, null);
+    }
+
+    /**
+     * Gets the name of the mock object.
+     * @param stub The mock object
+     * @return The mock name or null
+     */
+    public static String getMockName(Object stub) {
+        return PROVIDERS.get(stub)?.mockName;
+    }
+
+    /**
+     * Creates a spy on a specific method of a mock object.
+     * @param stub The mock object created by Mock.of()
+     * @param methodName The name of the method to spy on
+     * @return A MethodSpy for stubbing or call history access
+     */
+    public static MethodSpy spyOn(Object stub, String methodName) {
+        if (!PROVIDERS.containsKey(stub)) {
+            throw new MockException('Object is not a valid Mock instance.');
+        }
+        return new MethodSpy(PROVIDERS.get(stub), methodName);
+    }
+
+    /**
+     * Creates an expectation for verifying mock interactions or asserting values.
+     * @param stub The mock object or value to assert
+     * @return A MockExpectation for fluent verification
+     */
+    public static MockExpectation expect(Object stub) {
+        if (PROVIDERS.containsKey(stub)) {
+            return new MockExpectation(PROVIDERS.get(stub));
+        }
+        return new MockExpectation(stub, false);
+    }
+
+    /**
+     * Clears the interaction history of the specific mock object.
+     * @param stub The mock object
+     */
+    public static void clear(Object stub) {
+        MockProvider provider = PROVIDERS.get(stub);
+        if (provider != null) {
+            provider.clear();
+        }
+    }
+
+    /**
+     * Clears the interaction history of ALL registered mock objects.
+     */
+    public static void clearAll() {
+        for (MockProvider provider : PROVIDERS.values()) {
+            provider.clear();
+        }
+    }
+
+    /**
+     * Resets the mock object completely.
+     * @param stub The mock object
+     */
+    public static void reset(Object stub) {
+        MockProvider provider = PROVIDERS.get(stub);
+        if (provider != null) {
+            provider.reset();
+        }
+    }
+
+    /**
+     * Resets ALL registered mock objects.
+     */
+    public static void resetAll() {
+        for (MockProvider provider : PROVIDERS.values()) {
+            provider.reset();
+        }
+    }
+
+    /**
+     * Creates an expectation for a specific method spy.
+     * @param spy The method spy to expect
+     * @return A MockExpectation for verification
+     */
+    public static MockExpectation expect(MethodSpy spy) {
+        return new MockExpectation(spy.provider, spy.methodName);
+    }
+
+    /**
+     * Creates and registers an HTTP mock for callout testing.
+     * @return The HttpMock instance
+     * @example
+     * Mock.HttpMock http = Mock.mockHttp();
+     * http.mockResponse('https://api.com', '{"ok":true}', 200);
+     */
+    public static HttpMock mockHttp() {
+        HttpMock mock = new HttpMock();
+        Test.setMock(HttpCalloutMock.class, mock);
+        return mock;
+    }
+
+    /**
+     * Creates an expectation for verifying HTTP mocks.
+     * @param mock The HTTP mock to verify
+     * @return An HttpMockExpectation
+     */
+    public static HttpMockExpectation expect(HttpMock mock) {
+        return new HttpMockExpectation(mock);
+    }
+
+    /**
+     * Creates an expectation for verifying code block exceptions.
+     * @param b The block of code
+     * @return An ExceptionExpectation
+     */
+    public static ExceptionExpectation expect(Block b) {
+        return new ExceptionExpectation(b);
+    }
+
+    /**
+     * Matches any value.
+     * @return A Matcher instance
+     */
+    public static Matcher any() {
+        return new AnyMatcher();
+    }
+
+    /**
+     * Matches any String value.
+     * @return A Matcher instance
+     */
+    public static Matcher anyString() {
+        return new StringMatcher();
+    }
+
+    /**
+     * Matches any Integer value.
+     * @return A Matcher instance
+     */
+    public static Matcher anyInteger() {
+        return new IntegerMatcher();
+    }
+
+    /**
+     * Matches any Decimal value.
+     * @return A Matcher instance
+     */
+    public static Matcher anyDecimal() {
+        return new DecimalMatcher();
+    }
+
+    /**
+     * Matches any Id value.
+     * @return A Matcher instance
+     */
+    public static Matcher anyId() {
+        return new IdMatcher();
+    }
+
+    /**
+     * Matches any Boolean value.
+     * @return A Matcher instance
+     */
+    public static Matcher anyBoolean() {
+        return new BooleanMatcher();
+    }
+
+    /**
+     * Matches any List value.
+     * @return A Matcher instance
+     */
+    public static Matcher anyList() {
+        return new ListMatcher();
+    }
+
+    /**
+     * Matches any Map value.
+     * @return A Matcher instance
+     */
+    public static Matcher anyMap() {
+        return new MapMatcher();
+    }
+
+    /**
+     * Matches any Date value.
+     * @return A Matcher instance
+     */
+    public static Matcher anyDate() {
+        return new DateMatcher();
+    }
+
+    /**
+     * Matches any Datetime value.
+     * @return A Matcher instance
+     */
+    public static Matcher anyDatetime() {
+        return new DatetimeMatcher();
+    }
+
+    /**
+     * Matches any Time value.
+     * @return A Matcher instance
+     */
+    public static Matcher anyTime() {
+        return new TimeMatcher();
+    }
+
+    /**
+     * Matches any value of a specific type.
+     * @param type The type to match
+     * @return A Matcher instance
+     */
+    public static Matcher any(Type type) {
+        return new TypeMatcher(type);
+    }
+
+    /**
+     * Matches any SObject.
+     * @return A Matcher instance
+     */
+    public static Matcher anySObject() {
+        return new SObjectMatcher();
+    }
+
+    /**
+     * Matches any SObject of a specific type.
+     * @param sObjectType The SObject type to match
+     * @return A Matcher instance
+     */
+    public static Matcher anySObject(Schema.SObjectType sObjectType) {
+        return new SObjectMatcher(sObjectType);
+    }
+
+    /**
+     * Negates the specified matcher.
+     * @param matcher The matcher to negate
+     * @return A negated Matcher
+     */
+    public static Matcher notx(Matcher matcher) {
+        return new NotMatcher(matcher);
+    }
+
+    /**
+     * Creates a matcher that checks if an object contains specific fields.
+     * @param expected Map of field names to values or matchers
+     * @return A Matcher instance
+     */
+    public static Matcher objectContaining(Map<String, Object> expected) {
+        return new ObjectContainingMatcher(expected);
+    }
+
+    /**
+     * Matches SObjects containing specified populated fields.
+     * @param expected The template SObject
+     * @return A Matcher instance
+     */
+    public static Matcher sObjectContaining(SObject expected) {
+        return new ObjectContainingMatcher(expected.getPopulatedFieldsAsMap());
+    }
+
+    /**
+     * Matches SObjects containing specific field/value pairs.
+     * @param expected Map of field/value pairs
+     * @return A Matcher instance
+     */
+    public static Matcher sObjectContaining(Map<SObjectField, Object> expected) {
+        Map<String, Object> stringMap = new Map<String, Object>();
+        for (SObjectField field : expected.keySet()) {
+            stringMap.put(String.valueOf(field), expected.get(field));
+        }
+        return new ObjectContainingMatcher(stringMap);
+    }
+
+    /**
+     * Matches strings containing a specific substring.
+     * @param expected The substring to find
+     * @return A Matcher instance
+     */
+    public static Matcher stringContaining(String expected) {
+        return new StringContainingMatcher(expected);
+    }
+
+    /**
+     * Matches collections containing a specific item.
+     * @param expected The item or matcher to find
+     * @return A Matcher instance
+     */
+    public static Matcher iterableContaining(Object expected) {
+        return new IterableContainingMatcher(expected);
+    }
+
+    /**
+     * Generates a valid 18-character fake ID for the specified SObject type.
+     * @param sObjectType The SObject type
+     * @return A unique fake ID
+     */
+    public static Id fakeId(Schema.SObjectType sObjectType) {
+        String keyPrefix = sObjectType.getDescribe(SObjectDescribeOptions.DEFERRED).getKeyPrefix();
+        fakeIdCount++;
+        return Id.valueOf(keyPrefix + '0'.repeat(12 - String.valueOf(fakeIdCount).length()) + fakeIdCount);
+    }
+
+    /**
+     * Generates a list of valid 18-character fake IDs for the specified SObject type.
+     * @param sObjectType The SObject type
+     * @param count Number of IDs to generate
+     * @return List of fake IDs
+     */
+    public static List<Id> fakeIds(Schema.SObjectType sObjectType, Integer count) {
+        List<Id> ids = new List<Id>();
+        for (Integer i = 0; i < count; i++) {
+            ids.add(fakeId(sObjectType));
+        }
+        return ids;
+    }
+
+    private static Boolean valuesMatch(Object act, Object exp) {
+        if (exp instanceof Matcher) {
+            return ((Matcher) exp).matches(act);
+        }
+        return exp == act || exp?.equals(act) == true;
+    }
+
+    private static Type getType(Object o) {
+        return Type.forName(getTypeName(o));
+    }
+
+    private static String getTypeName(Object o) {
+        System.JSON result;
+        try {
+            // Force a type exception to extract the runtime type name
+            result = (System.JSON) o;
+            return 'System.JSON';
+        } catch (TypeException e) {
+            return e.getMessage().substringBetween('Invalid conversion from runtime type ', ' to System.JSON');
+        }
+    }
+
+    /**
+     * Fluent builder for configuring method return values and behaviors.
+     */
+    public class MethodSpy {
+        public final MockProvider provider;
+        public final String methodName;
+
+        private MethodSpy(MockProvider provider, String methodName) {
+            this.provider = provider;
+            this.methodName = methodName;
+        }
+
+        /**
+         * Returns the list of arguments for each call to this spy.
+         */
+        public List<List<Object>> calls {
+            get {
+                List<List<Object>> history = new List<List<Object>>();
+                for (MethodCall call : provider.getCalls(methodName)) {
+                    history.add(call.args);
+                }
+                return history;
+            }
+        }
+
+        /**
+         * Configures the method to always return the specified value.
+         * @param value The value to return
+         * @return This spy instance for chaining
+         */
+        public MethodSpy mockReturnValue(Object value) {
+            provider.setReturnValue(methodName, value);
+            return this;
+        }
+
+        /**
+         * Configures the method to return the specified value once.
+         * Useful for testing sequential calls with different outcomes.
+         * @param value The value to return once
+         * @return This spy instance for chaining
+         */
+        public MethodSpy mockReturnValueOnce(Object value) {
+            provider.addReturnValueOnce(methodName, value);
+            return this;
+        }
+
+        /**
+         * Configures the method to throw an exception when called.
+         * @param error The exception to throw
+         * @return This spy instance for chaining
+         */
+        public MethodSpy mockThrow(Exception error) {
+            provider.setException(methodName, error);
+            return this;
+        }
+
+        /**
+         * Configures a dynamic implementation for the method.
+         * @param callback The dynamic implementation
+         * @return This spy instance for chaining
+         * @example
+         * spy.mockImplementation(new MyCallback());
+         */
+        public MethodSpy mockImplementation(Callback callback) {
+            provider.setCallback(methodName, callback);
+            return this;
+        }
+    }
+
+    /**
+     * Fluent API for verifying mock interactions or asserting values.
+     */
+    public class MockExpectation {
+        private final MockProvider provider;
+        private final String boundMethodName;
+        private final Boolean isNegated;
+        private final Object actualValue;
+        private final Boolean isValueAssertion;
+
+        private MockExpectation(MockProvider provider) {
+            this(provider, null, false);
+        }
+
+        private MockExpectation(MockProvider provider, String boundMethodName) {
+            this(provider, boundMethodName, false);
+        }
+
+        private MockExpectation(MockProvider provider, String boundMethodName, Boolean isNegated) {
+            this.provider = provider;
+            this.boundMethodName = boundMethodName;
+            this.isNegated = isNegated;
+            this.actualValue = null;
+            this.isValueAssertion = false;
+        }
+
+        private MockExpectation(Object actualValue, Boolean isNegated) {
+            this.provider = null;
+            this.boundMethodName = null;
+            this.isNegated = isNegated;
+            this.actualValue = actualValue;
+            this.isValueAssertion = true;
+        }
+
+        /**
+         * Negates the expectation.
+         */
+        public MockExpectation notx {
+            get {
+                if (isValueAssertion) {
+                    return new MockExpectation(actualValue, !isNegated);
+                }
+                return new MockExpectation(provider, boundMethodName, !isNegated);
+            }
+        }
+
+        /**
+         * Asserts strict reference equality (===).
+         * @param expected The expected object reference
+         */
+        public void toBe(Object expected) {
+            validateAssertion();
+            if (!isNegated && actualValue !== expected) {
+                throw new MockException('Expected reference equality: ' + expected + ', but was: ' + actualValue);
+            }
+            if (isNegated && actualValue === expected) {
+                throw new MockException('Expected NOT reference equality: ' + expected + ', but was: ' + actualValue);
+            }
+        }
+
+        /**
+         * Asserts value equality (==).
+         * @param expected The expected value
+         */
+        public void toEqual(Object expected) {
+            validateAssertion();
+            if (!isNegated && actualValue != expected) {
+                throw new MockException('Expected value equality: ' + expected + ', but was: ' + actualValue);
+            }
+            if (isNegated && actualValue == expected) {
+                throw new MockException('Expected NOT value equality: ' + expected + ', but was: ' + actualValue);
+            }
+        }
+
+        /**
+         * Asserts that a value matches the specified regex pattern.
+         * @param regex The regular expression
+         */
+        public void toMatch(String regex) {
+            validateAssertion();
+            String actualStr = String.valueOf(actualValue);
+            Pattern p = Pattern.compile(regex);
+            System.Matcher m = p.matcher(actualStr);
+            Boolean matches = m.find();
+
+            if (!isNegated && !matches) {
+                throw new MockException('Expected: "' + actualValue + '" to match pattern: ' + regex);
+            }
+            if (isNegated && matches) {
+                throw new MockException('Expected: "' + actualValue + '" NOT to match pattern: ' + regex);
+            }
+        }
+
+        /**
+         * Asserts that a value matches the specified Matcher.
+         * @param matcher The matcher to use
+         */
+        public void toMatch(Matcher matcher) {
+            validateAssertion();
+            Boolean matches = matcher.matches(actualValue);
+
+            if (!isNegated && !matches) {
+                throw new MockException('Expected value to match ' + matcher);
+            }
+            if (isNegated && matches) {
+                throw new MockException('Expected value NOT to match ' + matcher);
+            }
+        }
+
+        /**
+         * Asserts that a string or collection contains the specified item.
+         * @param item The item or substring to look for
+         */
+        public void toContain(Object item) {
+            validateAssertion();
+            Boolean contains = false;
+
+            if (actualValue instanceof String && item instanceof String) {
+                contains = ((String) actualValue).contains((String) item);
+            } else if (actualValue instanceof Iterable<Object>) {
+                for (Object nextItem : (Iterable<Object>) actualValue) {
+                    if (valuesMatch(nextItem, item)) {
+                        contains = true;
+                        break;
+                    }
+                }
+            } else {
+                throw new MockException('toContain() expected an Iterable or String, but got: ' + actualValue);
+            }
+
+            if (!isNegated && !contains) {
+                throw new MockException('Expected: ' + actualValue + ' to contain: ' + item);
+            }
+            if (isNegated && contains) {
+                throw new MockException('Expected: ' + actualValue + ' NOT to contain: ' + item);
+            }
+        }
+
+        /**
+         * Asserts that the value is null.
+         */
+        public void toBeNull() {
+            validateAssertion();
+            if (!isNegated && actualValue != null) {
+                throw new MockException('Expected null, but was: ' + actualValue);
+            }
+            if (isNegated && actualValue == null) {
+                throw new MockException('Expected NOT null, but was null');
+            }
+        }
+
+        /**
+         * Asserts that the value is true.
+         */
+        public void toBeTrue() {
+            validateAssertion();
+            if (!isNegated && actualValue != true) {
+                throw new MockException('Expected true, but was: ' + actualValue);
+            }
+            if (isNegated && actualValue == true) {
+                throw new MockException('Expected NOT true, but was true');
+            }
+        }
+
+        /**
+         * Asserts that the value is false.
+         */
+        public void toBeFalse() {
+            validateAssertion();
+            if (!isNegated && actualValue != false) {
+                throw new MockException('Expected false, but was: ' + actualValue);
+            }
+            if (isNegated && actualValue == false) {
+                throw new MockException('Expected NOT false, but was false');
+            }
+        }
+
+        /**
+         * Asserts that the value is less than the specified number.
+         * @param value The maximum value (exclusive)
+         */
+        public void toBeLessThan(Decimal value) {
+            validateAssertion();
+            Decimal actualDec = (Decimal) actualValue;
+            if (!isNegated && !(actualDec < value)) {
+                throw new MockException('Expected ' + actualValue + ' to be less than ' + value);
+            }
+            if (isNegated && actualDec < value) {
+                throw new MockException('Expected ' + actualValue + ' NOT to be less than ' + value);
+            }
+        }
+
+        /**
+         * Asserts that the value is greater than the specified number.
+         * @param value The minimum value (exclusive)
+         */
+        public void toBeGreaterThan(Decimal value) {
+            validateAssertion();
+            Decimal actualDec = (Decimal) actualValue;
+            if (!isNegated && !(actualDec > value)) {
+                throw new MockException('Expected ' + actualValue + ' to be greater than ' + value);
+            }
+            if (isNegated && actualDec > value) {
+                throw new MockException('Expected ' + actualValue + ' NOT to be greater than ' + value);
+            }
+        }
+
+        private void validateAssertion() {
+            if (!isValueAssertion) {
+                throw new MockException('Cannot call value assertion methods on a mock verification object.');
+            }
+        }
+
+        private void validateMockVerification() {
+            if (isValueAssertion) {
+                throw new MockException('Cannot call mock verification methods on a value assertion object.');
+            }
+        }
+
+        /**
+         * Verifies the bound method (from expect(spy)) was called at least once.
+         * @return This expectation instance for chaining
+         */
+        public MockExpectation toHaveBeenCalled() {
+            validateMockVerification();
+            if (boundMethodName == null) {
+                throw new MockException('Method name must be provided when not using expect(spy).');
+            }
+            return toHaveBeenCalled(boundMethodName);
+        }
+
+        /**
+         * Verifies the method was called at least once.
+         * @param methodName The name of the method to verify
+         * @return This expectation instance for chaining
+         */
+        public MockExpectation toHaveBeenCalled(String methodName) {
+            validateMockVerification();
+            List<MethodCall> calls = provider.getCalls(methodName);
+            String prefix = getNamePrefix();
+            if (!isNegated && calls.isEmpty()) {
+                throw new MockException(
+                    prefix + 'Expected method "' + methodName + '" to have been called, but it was not.'
+                );
+            }
+            if (isNegated && !calls.isEmpty()) {
+                throw new MockException(
+                    prefix +
+                        'Expected method "' +
+                        methodName +
+                        '" NOT to have been called, but it was called ' +
+                        calls.size() +
+                        ' times.'
+                );
+            }
+            return this;
+        }
+
+        /**
+         * Verifies the bound method was called exactly n times.
+         * @param times Expected number of calls
+         * @return This expectation instance for chaining
+         */
+        public MockExpectation toHaveBeenCalledTimes(Integer times) {
+            validateMockVerification();
+            if (boundMethodName == null) {
+                throw new MockException('Method name must be provided when not using expect(spy).');
+            }
+            return toHaveBeenCalledTimes(boundMethodName, times);
+        }
+
+        /**
+         * Verifies the method was called exactly n times.
+         * @param methodName Name of the method
+         * @param times Expected number of calls
+         * @return This expectation instance for chaining
+         */
+        public MockExpectation toHaveBeenCalledTimes(String methodName, Integer times) {
+            validateMockVerification();
+            List<MethodCall> calls = provider.getCalls(methodName);
+            String prefix = getNamePrefix();
+            if (!isNegated && calls.size() != times) {
+                throw new MockException(
+                    prefix +
+                        'Expected method "' +
+                        methodName +
+                        '" to have been called ' +
+                        times +
+                        ' times, but it was called ' +
+                        calls.size() +
+                        ' times.'
+                );
+            }
+            if (isNegated && calls.size() == times) {
+                throw new MockException(
+                    prefix +
+                        'Expected method "' +
+                        methodName +
+                        '" NOT to have been called ' +
+                        times +
+                        ' times, but it was.'
+                );
+            }
+            return this;
+        }
+
+        /**
+         * Verifies the bound method was called with specific arguments.
+         * @param expectedArgs List of expected arguments
+         * @return This expectation instance for chaining
+         * @example
+         * Mock.expect(spy).toHaveBeenCalledWith(new List<Object>{ 'test', 100 });
+         */
+        public MockExpectation toHaveBeenCalledWith(List<Object> expectedArgs) {
+            validateMockVerification();
+            if (boundMethodName == null) {
+                throw new MockException('Method name must be provided when not using expect(spy).');
+            }
+            return toHaveBeenCalledWith(boundMethodName, expectedArgs);
+        }
+
+        /**
+         * Verifies the method was called with specific arguments.
+         * @param methodName Name of the method
+         * @param expectedArgs List of expected arguments
+         * @return This expectation instance for chaining
+         */
+        public MockExpectation toHaveBeenCalledWith(String methodName, List<Object> expectedArgs) {
+            validateMockVerification();
+            List<MethodCall> calls = provider.getCalls(methodName);
+            String prefix = getNamePrefix();
+            if (!isNegated && calls.isEmpty()) {
+                throw new MockException(
+                    prefix + 'Expected method "' + methodName + '" to have been called, but it was not.'
+                );
+            }
+
+            Boolean matchFound = false;
+            for (MethodCall call : calls) {
+                if (argsMatch(call.args, expectedArgs)) {
+                    matchFound = true;
+                    if (isNegated) {
+                        throw new MockException(
+                            prefix +
+                                'Expected method "' +
+                                methodName +
+                                '" NOT to have been called with arguments ' +
+                                expectedArgs +
+                                ', but it was.'
+                        );
+                    }
+                    return this;
+                }
+            }
+
+            if (!isNegated && !matchFound) {
+                throw new MockException(
+                    prefix +
+                        'Expected method "' +
+                        methodName +
+                        '" to have been called with matching arguments, but no matching call was found.'
+                );
+            }
+
+            return this;
+        }
+
+        /**
+         * Verifies that the absolute last call to this method matched the specified arguments.
+         * @param expectedArgs List of expected arguments
+         * @return This expectation instance for chaining
+         */
+        public MockExpectation lastCalledWith(List<Object> expectedArgs) {
+            validateMockVerification();
+            if (boundMethodName == null) {
+                throw new MockException('Method name must be provided for lastCalledWith.');
+            }
+            List<MethodCall> calls = provider.getCalls(boundMethodName);
+            if (calls.isEmpty()) {
+                throw new MockException(
+                    'Expected method "' + boundMethodName + '" to have been called, but it was not.'
+                );
+            }
+
+            MethodCall lastCall = calls.get(calls.size() - 1);
+            String prefix = getNamePrefix();
+            if (!argsMatch(lastCall.args, expectedArgs)) {
+                throw new MockException(
+                    prefix +
+                        'Expected last call to "' +
+                        boundMethodName +
+                        '" to be with ' +
+                        expectedArgs +
+                        ', but was ' +
+                        lastCall.args
+                );
+            }
+            return this;
+        }
+
+        /**
+         * Verifies that the N-th call (1-based index) to this method matched the specified arguments.
+         * @param n Call index (1-based)
+         * @param expectedArgs List of expected arguments
+         * @return This expectation instance for chaining
+         */
+        public MockExpectation nthCalledWith(Integer n, List<Object> expectedArgs) {
+            validateMockVerification();
+            if (boundMethodName == null) {
+                throw new MockException('Method name must be provided for nthCalledWith.');
+            }
+            List<MethodCall> calls = provider.getCalls(boundMethodName);
+            if (calls.size() < n) {
+                throw new MockException(
+                    'Expected at least ' + n + ' calls to "' + boundMethodName + '", but only found ' + calls.size()
+                );
+            }
+
+            MethodCall nthCall = calls.get(n - 1); // 1-based index
+            String prefix = getNamePrefix();
+            if (!argsMatch(nthCall.args, expectedArgs)) {
+                throw new MockException(
+                    prefix +
+                        'Expected call #' +
+                        n +
+                        ' to "' +
+                        boundMethodName +
+                        '" to be with ' +
+                        expectedArgs +
+                        ', but was ' +
+                        nthCall.args
+                );
+            }
+            return this;
+        }
+
+        private String getNamePrefix() {
+            return provider?.mockName != null ? '[' + provider.mockName + '] ' : '';
+        }
+
+        private Boolean argsMatch(List<Object> actual, List<Object> expected) {
+            if (actual == null && expected == null) {
+                return true;
+            }
+            if (actual == null || expected == null) {
+                return false;
+            }
+            if (actual.size() != expected.size()) {
+                return false;
+            }
+
+            for (Integer i = 0; i < expected.size(); i++) {
+                if (!valuesMatch(actual[i], expected[i])) {
+                    return false;
+                }
+            }
+            return true;
+        }
+    }
+
+    /**
+     * Fluent API for asserting that a block of code throws an exception.
+     */
+    public class ExceptionExpectation {
+        private final Block b;
+        private Exception caughtException;
+        private Boolean executed = false;
+
+        /**
+         * Constructor for ExceptionExpectation.
+         * @param b The block of code to test
+         */
+        public ExceptionExpectation(Block b) {
+            this.b = b;
+        }
+
+        private void execute() {
+            if (executed) {
+                return;
+            }
+            try {
+                b.run();
+            } catch (Exception e) {
+                caughtException = e;
+            }
+            executed = true;
+        }
+
+        /**
+         * Asserts that the block of code threw an exception.
+         */
+        public void toThrow() {
+            execute();
+            if (caughtException == null) {
+                throw new MockException('Expected block to throw an exception, but it did not.');
+            }
+        }
+
+        /**
+         * Asserts that the block threw an exception with a message containing the specified string.
+         * @param message The substring to look for in the exception message
+         */
+        public void toThrow(String message) {
+            execute();
+            if (caughtException == null) {
+                throw new MockException(
+                    'Expected block to throw an exception with message containing "' +
+                        message +
+                        '", but it did not throw.'
+                );
+            }
+            if (!caughtException.getMessage().contains(message)) {
+                throw new MockException(
+                    'Expected exception message to contain "' + message + '", but got: ' + caughtException.getMessage()
+                );
+            }
+        }
+
+        /**
+         * Asserts that the block threw an exception of the specific Type.
+         * @param exceptionType The expected exception type
+         */
+        public void toThrow(Type exceptionType) {
+            execute();
+            if (caughtException == null) {
+                throw new MockException(
+                    'Expected block to throw exception of type ' + exceptionType.getName() + ', but it did not throw.'
+                );
+            }
+            if (Type.forName(caughtException.getTypeName()) != exceptionType) {
+                throw new MockException(
+                    'Expected exception of type ' +
+                        exceptionType.getName() +
+                        ', but got: ' +
+                        caughtException.getTypeName()
+                );
+            }
+        }
+    }
+
+    /**
+     * Represents a recorded method call.
+     */
+    public class MethodCall {
+        /** Name of the method. */
+        public String methodName { get; private set; }
+        /** List of arguments. */
+        public List<Object> args { get; private set; }
+
+        /**
+         * Constructor for MethodCall.
+         * @param methodName Name of the method
+         * @param args List of arguments
+         */
+        public MethodCall(String methodName, List<Object> args) {
+            this.methodName = methodName;
+            this.args = args;
+        }
+    }
+
+    /**
+     * Internal implementation of System.StubProvider.
+     */
+    public class MockProvider implements System.StubProvider {
+        private final Map<String, Object> returnValues = new Map<String, Object>();
+        private final Map<String, List<Object>> returnValuesOnce = new Map<String, List<Object>>();
+        private final Map<String, Exception> exceptions = new Map<String, Exception>();
+        private final Map<String, Callback> callbacks = new Map<String, Callback>();
+        private final Map<String, List<MethodCall>> callsByMethod = new Map<String, List<MethodCall>>();
+        private final List<MethodCall> calls = new List<MethodCall>();
+        public final String mockName;
+
+        /**
+         * Constructor for MockProvider with a name.
+         * @param mockName The name of the mock
+         */
+        public MockProvider(String mockName) {
+            this.mockName = mockName;
+        }
+
+        /**
+         * Sets a persistent return value for a method.
+         * @param methodName Name of the method
+         * @param returnValue The value to return
+         */
+        public void setReturnValue(String methodName, Object returnValue) {
+            returnValues.put(methodName, returnValue);
+        }
+
+        /**
+         * Adds a one-time return value for a method.
+         * @param methodName Name of the method
+         * @param returnValue The value to return once
+         */
+        public void addReturnValueOnce(String methodName, Object returnValue) {
+            if (!returnValuesOnce.containsKey(methodName)) {
+                returnValuesOnce.put(methodName, new List<Object>());
+            }
+            returnValuesOnce.get(methodName).add(returnValue);
+        }
+
+        /**
+         * Sets an exception to be thrown by a method.
+         * @param methodName Name of the method
+         * @param error The exception to throw
+         */
+        public void setException(String methodName, Exception error) {
+            exceptions.put(methodName, error);
+        }
+
+        /**
+         * Sets a callback for a method.
+         * @param methodName Name of the method
+         * @param callback The callback implementation
+         */
+        public void setCallback(String methodName, Callback callback) {
+            callbacks.put(methodName, callback);
+        }
+
+        /**
+         * Clears call history.
+         */
+        public void clear() {
+            calls.clear();
+            callsByMethod.clear();
+        }
+
+        /**
+         * Resets history and behavior.
+         */
+        public void reset() {
+            calls.clear();
+            callsByMethod.clear();
+            returnValues.clear();
+            returnValuesOnce.clear();
+            exceptions.clear();
+            callbacks.clear();
+        }
+
+        /**
+         * Returns calls for a method.
+         * @param methodName Name of the method
+         * @return List of MethodCalls
+         */
+        public List<MethodCall> getCalls(String methodName) {
+            return callsByMethod.get(methodName) ?? new List<MethodCall>();
+        }
+
+        /**
+         * Handle method call from Test.createStub.
+         * @param stubbedObject The stub object
+         * @param stubbedMethodName The method name
+         * @param returnType Expected return type
+         * @param listOfParamTypes Parameter types
+         * @param listOfParamNames Parameter names
+         * @param listOfArgs Arguments
+         * @return Mocked result or null
+         */
+        public Object handleMethodCall(
+            Object stubbedObject,
+            String stubbedMethodName,
+            Type returnType,
+            List<Type> listOfParamTypes,
+            List<String> listOfParamNames,
+            List<Object> listOfArgs
+        ) {
+            // Record the call
+            MethodCall call = new MethodCall(stubbedMethodName, listOfArgs);
+            calls.add(call);
+            if (!callsByMethod.containsKey(stubbedMethodName)) {
+                callsByMethod.put(stubbedMethodName, new List<MethodCall>());
+            }
+            callsByMethod.get(stubbedMethodName).add(call);
+
+            // Check if we should throw an exception
+            if (exceptions.containsKey(stubbedMethodName)) {
+                throw exceptions.get(stubbedMethodName);
+            }
+
+            // Check for callbacks
+            if (callbacks.containsKey(stubbedMethodName)) {
+                return callbacks.get(stubbedMethodName).call(listOfArgs);
+            }
+
+            // Check for one-time return values first
+            if (returnValuesOnce.containsKey(stubbedMethodName)) {
+                List<Object> onceValues = returnValuesOnce.get(stubbedMethodName);
+                if (!onceValues.isEmpty()) {
+                    return onceValues.remove(0);
+                }
+            }
+
+            // Fall back to persistent return value
+            return returnValues.get(stubbedMethodName);
+        }
+    }
+
+    /**
+     * Callback interface for dynamic mock implementations.
+     */
+    public interface Callback {
+        /**
+         * Executes the callback logic.
+         * @param args The arguments passed to the mocked method
+         * @return The value to return from the mocked method
+         */
+        Object call(List<Object> args);
+    }
+
+    /**
+     * Represents a block of code for exception testing.
+     */
+    public interface Block {
+        /**
+         * Runs the code block.
+         */
+        void run();
+    }
+
+    /**
+     * Base interface for custom argument matchers.
+     */
+    public interface Matcher {
+        /**
+         * Determines if the actual value matches the criteria.
+         * @param actual The value to check
+         * @return True if the value matches
+         */
+        Boolean matches(Object actual);
+    }
+
+    /**
+     * Matcher that matches any non-null value (or null if used as any()).
+     */
+    public class AnyMatcher implements Matcher {
+        /**
+         * Returns true for any value.
+         * @param actual The value to check
+         * @return True
+         */
+        public Boolean matches(Object actual) {
+            return true;
+        }
+    }
+
+    /** Matcher for String values. */
+    public class StringMatcher implements Matcher {
+        /**
+         * Checks if the value is a String.
+         * @param actual Value
+         * @return True if String
+         */
+        public Boolean matches(Object actual) {
+            return actual instanceof String;
+        }
+    }
+
+    /** Matcher for Integer values. */
+    public class IntegerMatcher implements Matcher {
+        /**
+         * Checks if the value is an Integer.
+         * @param actual Value
+         * @return True if Integer
+         */
+        public Boolean matches(Object actual) {
+            return actual instanceof Integer;
+        }
+    }
+
+    /** Matcher for Decimal values. */
+    public class DecimalMatcher implements Matcher {
+        /**
+         * Checks if the value is a Decimal.
+         * @param actual Value
+         * @return True if Decimal
+         */
+        public Boolean matches(Object actual) {
+            return actual instanceof Decimal;
+        }
+    }
+
+    /** Matcher for Id values. */
+    public class IdMatcher implements Matcher {
+        /**
+         * Checks if the value is an Id.
+         * @param actual Value
+         * @return True if Id
+         */
+        public Boolean matches(Object actual) {
+            return actual instanceof Id;
+        }
+    }
+
+    /** Matcher for Boolean values. */
+    public class BooleanMatcher implements Matcher {
+        /**
+         * Checks if the value is a Boolean.
+         * @param actual Value
+         * @return True if Boolean
+         */
+        public Boolean matches(Object actual) {
+            return actual instanceof Boolean;
+        }
+    }
+
+    /** Matcher for List values. */
+    public class ListMatcher implements Matcher {
+        /**
+         * Checks if the value is a List.
+         * @param actual Value
+         * @return True if List
+         */
+        public Boolean matches(Object actual) {
+            return actual instanceof List<Object>;
+        }
+    }
+
+    /** Matcher for Map values. */
+    public class MapMatcher implements Matcher {
+        /**
+         * Checks if the value is a Map.
+         * @param actual Value
+         * @return True if Map
+         */
+        public Boolean matches(Object actual) {
+            return actual instanceof Map<String, Object>;
+        }
+    }
+
+    /** Matcher for Date values. */
+    public class DateMatcher implements Matcher {
+        /**
+         * Checks if the value is a Date.
+         * @param actual Value
+         * @return True if Date
+         */
+        public Boolean matches(Object actual) {
+            return actual instanceof Date;
+        }
+    }
+
+    /** Matcher for Datetime values. */
+    public class DatetimeMatcher implements Matcher {
+        /**
+         * Checks if the value is a Datetime.
+         * @param actual Value
+         * @return True if Datetime
+         */
+        public Boolean matches(Object actual) {
+            return actual instanceof Datetime;
+        }
+    }
+
+    /** Matcher for Time values. */
+    public class TimeMatcher implements Matcher {
+        /**
+         * Checks if the value is a Time.
+         * @param actual Value
+         * @return True if Time
+         */
+        public Boolean matches(Object actual) {
+            return actual instanceof Time;
+        }
+    }
+
+    /** Matcher for SObjects. */
+    public class SObjectMatcher implements Matcher {
+        private final Schema.SObjectType sObjectType;
+
+        /** Default constructor. */
+        public SObjectMatcher() {
+            this(null);
+        }
+
+        /**
+         * Constructor for SObjectMatcher.
+         * @param sObjectType Expected type
+         */
+        public SObjectMatcher(Schema.SObjectType sObjectType) {
+            this.sObjectType = sObjectType;
+        }
+
+        /**
+         * Checks if the SObject matches the expected type.
+         * @param actual The SObject to check
+         * @return True if the SObjectType matches
+         */
+        public Boolean matches(Object actual) {
+            if (!(actual instanceof SObject)) {
+                return false;
+            }
+            if (sObjectType != null) {
+                return ((SObject) actual).getSObjectType() == sObjectType;
+            }
+            return true;
+        }
+    }
+
+    /** Matcher for specific Types. */
+    public class TypeMatcher implements Matcher {
+        private final Type expectedType;
+        /**
+         * Constructor for TypeMatcher.
+         * @param expectedType Expected type
+         */
+        public TypeMatcher(Type expectedType) {
+            this.expectedType = expectedType;
+        }
+        /**
+         * Checks if the object is an instance of the expected type.
+         * @param actual The object to check
+         * @return True if the object matches the type
+         */
+        public Boolean matches(Object actual) {
+            if (actual == null) {
+                return false;
+            }
+            return expectedType.isAssignableFrom(Mock.getType(actual));
+        }
+    }
+
+    /** Negating matcher. */
+    public class NotMatcher implements Matcher {
+        private final Matcher matcher;
+        /**
+         * Constructor for NotMatcher.
+         * @param matcher Matcher to negate
+         */
+        public NotMatcher(Matcher matcher) {
+            this.matcher = matcher;
+        }
+        /**
+         * Inverse matcher check.
+         * @param actual Value
+         * @return Inverse match result
+         */
+        public Boolean matches(Object actual) {
+            return !matcher.matches(actual);
+        }
+    }
+
+    /** Matcher for substrings. */
+    public class StringContainingMatcher implements Matcher {
+        private final String expected;
+        /**
+         * Constructor for StringContainingMatcher.
+         * @param expected Substring
+         */
+        public StringContainingMatcher(String expected) {
+            this.expected = expected;
+        }
+        /**
+         * Checks if string contains substring.
+         * @param actual Value
+         * @return True if contains
+         */
+        public Boolean matches(Object actual) {
+            return actual instanceof String && ((String) actual).contains(expected);
+        }
+    }
+
+    /** Matcher for collection items. */
+    public class IterableContainingMatcher implements Matcher {
+        private final Object expectedItem;
+        /**
+         * Constructor for IterableContainingMatcher.
+         * @param expectedItem Item or matcher
+         */
+        public IterableContainingMatcher(Object expectedItem) {
+            this.expectedItem = expectedItem;
+        }
+        /**
+         * Checks if collection contains item.
+         * @param actual Collection
+         * @return True if item found
+         */
+        public Boolean matches(Object actual) {
+            if (!(actual instanceof Iterable<Object>)) {
+                return false;
+            }
+
+            Iterator<Object> it = ((Iterable<Object>) actual).iterator();
+            while (it.hasNext()) {
+                Object item = it.next();
+                if (valuesMatch(item, expectedItem)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
+
+    /**
+     * Matcher that checks if an object, map, or SObject contains specific fields.
+     */
+    public class ObjectContainingMatcher implements Matcher {
+        private final Map<String, Object> expected;
+
+        /**
+         * Constructor for ObjectContainingMatcher.
+         * @param expected Map of field names to values or matchers
+         */
+        public ObjectContainingMatcher(Map<String, Object> expected) {
+            this.expected = expected;
+        }
+
+        /**
+         * Checks if the object contains the expected fields.
+         * @param actual The object, Map, or SObject to check
+         * @return True if all expected fields match
+         */
+        public Boolean matches(Object actual) {
+            if (actual == null) {
+                return false;
+            }
+
+            // For SObjects
+            if (actual instanceof SObject) {
+                SObject record = (SObject) actual;
+                for (String field : expected.keySet()) {
+                    Object expectedValue = expected.get(field);
+                    Object actualValue;
+                    try {
+                        actualValue = record.get(field);
+                    } catch (SObjectException e) {
+                        return false; // Field doesn't exist on SObject
+                    }
+                    if (!valuesMatch(actualValue, expectedValue)) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            // For Maps
+            if (actual instanceof Map<String, Object>) {
+                return matchMap((Map<String, Object>) actual);
+            }
+
+            // Fallback for DTOs/Custom Objects: Treat as Map via JSON serialization
+            try {
+                Map<String, Object> actualMap = (Map<String, Object>) JSON.deserializeUntyped(JSON.serialize(actual));
+                return matchMap(actualMap);
+            } catch (Exception e) {
+                return false;
+            }
+        }
+
+        /**
+         * Helper to match map contents.
+         * @param actualMap Map
+         * @return True if match
+         */
+        private Boolean matchMap(Map<String, Object> actualMap) {
+            for (String key : expected.keySet()) {
+                if (!actualMap.containsKey(key) || !valuesMatch(actualMap.get(key), expected.get(key))) {
+                    return false;
+                }
+            }
+            return true;
+        }
+    }
+
+    /**
+     * Mock implementation for the HttpCalloutMock interface.
+     */
+    public class HttpMock implements HttpCalloutMock {
+        private final Map<String, HttpResponse> responses = new Map<String, HttpResponse>();
+        private final List<HttpRequest> requests = new List<HttpRequest>();
+
+        /**
+         * Registers a response for a specific URL.
+         * @param url The endpoint URL
+         * @param res The response to return
+         */
+        public void mockResponse(String url, HttpResponse res) {
+            responses.put(url, res);
+        }
+
+        /**
+         * Registers a response for a specific HTTP method and URL.
+         * @param method HTTP method
+         * @param url Endpoint URL
+         * @param res The response to return
+         */
+        public void mockResponse(String method, String url, HttpResponse res) {
+            responses.put(method.toUpperCase() + ' ' + url, res);
+        }
+
+        /**
+         * Registers a response for any method if URL matches.
+         * @param url Endpoint URL
+         * @param body Response body
+         * @param statusCode HTTP status
+         */
+        public void mockResponse(String url, String body, Integer statusCode) {
+            mockResponse(null, url, body, statusCode);
+        }
+
+        /**
+         * Registers a response for a specific HTTP method, URL, and body.
+         * @param method HTTP method (e.g., 'GET', 'POST')
+         * @param url Endpoint URL
+         * @param body Response body
+         * @param statusCode HTTP status code
+         */
+        public void mockResponse(String method, String url, String body, Integer statusCode) {
+            HttpResponse res = new HttpResponse();
+            res.setBody(body);
+            res.setStatusCode(statusCode);
+            if (method != null) {
+                responses.put(method.toUpperCase() + ' ' + url, res);
+            } else {
+                responses.put(url, res);
+            }
+        }
+
+        /**
+         * Implementation of HttpCalloutMock.respond.
+         * @param req The HTTP request
+         * @return Mocked HTTP response
+         */
+        public HttpResponse respond(HttpRequest req) {
+            requests.add(req);
+            String endpoint = req.getEndpoint();
+            String method = (req.getMethod() ?? 'GET').toUpperCase();
+            String key = method + ' ' + endpoint;
+
+            if (responses.containsKey(key)) {
+                return responses.get(key);
+            }
+            if (responses.containsKey(endpoint)) {
+                return responses.get(endpoint);
+            }
+
+            // Default 404
+            HttpResponse res = new HttpResponse();
+            res.setStatusCode(404);
+            res.setStatus('Not Found');
+            return res;
+        }
+
+        /**
+         * Returns all recorded HTTP requests made to this mock.
+         * @return List of HttpRequests
+         */
+        public List<HttpRequest> getRequests() {
+            return requests;
+        }
+
+        /** Clears requests. */
+        public void clear() {
+            requests.clear();
+        }
+
+        /** Resets mock. */
+        public void reset() {
+            requests.clear();
+            responses.clear();
+        }
+    }
+
+    /**
+     * Fluent API for verifying interactions with HttpMock.
+     */
+    public class HttpMockExpectation {
+        private final HttpMock targetMock;
+        private final Boolean isNegated;
+
+        /**
+         * Constructor for HttpMockExpectation.
+         * @param targetMock The mock to verify
+         */
+        public HttpMockExpectation(HttpMock targetMock) {
+            this(targetMock, false);
+        }
+
+        private HttpMockExpectation(HttpMock targetMock, Boolean isNegated) {
+            this.targetMock = targetMock;
+            this.isNegated = isNegated;
+        }
+
+        /**
+         * Negates the expectation.
+         */
+        public HttpMockExpectation notx {
+            get {
+                return new HttpMockExpectation(targetMock, !isNegated);
+            }
+        }
+
+        /**
+         * Asserts that at least one HTTP call was made.
+         */
+        public void toHaveBeenCalled() {
+            if (!isNegated && targetMock.getRequests().isEmpty()) {
+                throw new MockException('Expected HTTP call, but none were made.');
+            }
+            if (isNegated && !targetMock.getRequests().isEmpty()) {
+                throw new MockException(
+                    'Expected NO HTTP calls, but ' + targetMock.getRequests().size() + ' were made.'
+                );
+            }
+        }
+
+        /**
+         * Asserts that exactly n HTTP calls were made.
+         * @param times Expected number of calls
+         */
+        public void toHaveBeenCalledTimes(Integer times) {
+            Integer actual = targetMock.getRequests().size();
+            if (!isNegated && actual != times) {
+                throw new MockException('Expected ' + times + ' HTTP calls, but ' + actual + ' were made.');
+            }
+            if (isNegated && actual == times) {
+                throw new MockException('Expected NOT to have ' + times + ' HTTP calls, but it did.');
+            }
+        }
+
+        /**
+         * Asserts that an HTTP call was made with specific URL and method.
+         * @param url Expected URL or matcher
+         * @param method Expected HTTP method or matcher
+         */
+        public void toHaveBeenCalledWith(Object url, Object method) {
+            toHaveBeenCalledWith(url, method, null, null);
+        }
+
+        /**
+         * Asserts that an HTTP call was made with specific URL, method and body.
+         * @param url Expected URL or matcher
+         * @param method Expected HTTP method or matcher
+         * @param body Expected body or matcher
+         */
+        public void toHaveBeenCalledWith(Object url, Object method, Object body) {
+            toHaveBeenCalledWith(url, method, body, null);
+        }
+
+        /**
+         * Full verification of an HTTP callout.
+         * @param url Expected URL or matcher
+         * @param method Expected HTTP method or matcher
+         * @param body Expected body or matcher
+         * @param headers Expected headers map
+         */
+        public void toHaveBeenCalledWith(Object url, Object method, Object body, Map<String, Object> headers) {
+            Boolean matchFound = false;
+            for (HttpRequest req : targetMock.getRequests()) {
+                if (requestMatches(req, url, method, body, headers)) {
+                    matchFound = true;
+                    break;
+                }
+            }
+
+            String msg = 'Expected HTTP call to ' + method + ' ' + url;
+            if (body != null) {
+                msg += ' with body matching ' + body;
+            }
+            if (headers != null) {
+                msg += ' with headers matching ' + headers;
+            }
+
+            if (!isNegated && !matchFound) {
+                throw new MockException(msg + ', but no matching call was found.');
+            }
+            if (isNegated && matchFound) {
+                throw new MockException(msg + ' NOT to have been made, but it was.');
+            }
+        }
+
+        /**
+         * Helper to match request details.
+         * @param req The request
+         * @param url Expected URL
+         * @param method Expected method
+         * @param body Expected body
+         * @param headers Expected headers
+         * @return True if matches
+         */
+        private Boolean requestMatches(
+            HttpRequest req,
+            Object url,
+            Object method,
+            Object body,
+            Map<String, Object> headers
+        ) {
+            if (!valuesMatch(req.getEndpoint(), url)) {
+                return false;
+            }
+            if (!valuesMatch(req.getMethod(), method)) {
+                return false;
+            }
+            if (body != null && !valuesMatch(req.getBody(), body)) {
+                return false;
+            }
+
+            if (headers != null) {
+                for (String key : headers.keySet()) {
+                    if (!valuesMatch(req.getHeader(key), headers.get(key))) {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+    }
+
+    /**
+     * Exception thrown by the Mock library for assertion failures.
+     */
+    public class MockException extends Exception {
+    }
+}
