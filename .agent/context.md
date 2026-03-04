@@ -37,6 +37,13 @@ Configure mock behavior using `spyOn`. Support for sequential returns, exception
     Mock.spyOn(mock, 'method').mockImplementation(new MyCallback());
     ```
 
+- **Overload-Specific Stubbing**:
+
+    ```apex
+    Mock.spyOn(mock, 'doWork', new List<Type>{ String.class })
+        .mockThrow(new MyException('String overload only'));
+    ```
+
 ### 3. Verification
 
 Verify method calls with Jest-like `expect` syntax. Supports both explicit mock verification and spy-based verification.
@@ -58,6 +65,8 @@ Verify method calls with Jest-like `expect` syntax. Supports both explicit mock 
     Mock.expect(spy).toHaveBeenCalledWith(new List<Object>{ 'arg1' });
     ```
 
+Use `expect(spy).toHaveBeenCalled()` for no-arg verification. For mock-level verification, pass the method name: `expect(mock).toHaveBeenCalled('method')`.
+
 - **Negation**:
 
     ```apex
@@ -75,6 +84,7 @@ Verify method calls with Jest-like `expect` syntax. Supports both explicit mock 
 Flexible argument matching for complex verification. All matchers support **recursive nesting**.
 
 - `Mock.any()`: Matches anything.
+  - Includes `null`.
 - `Mock.anyString()`, `Mock.anyInteger()`, `Mock.anyId()`, `Mock.anyBoolean()`
 - `Mock.anyList()`, `Mock.anyMap()`, `Mock.anyDate()`, `Mock.anyDatetime()`
 - `Mock.anyTime()`, `Mock.anySObject()`
@@ -154,6 +164,7 @@ List<Id> oppIds = Mock.fakeIds(Opportunity.SObjectType, 3);
 
 - **Mock.cls**: The central facade containing all static methods and inner classes (`MethodSpy`, `MockExpectation`, `Matcher`).
 - **MockProvider**: Internal `System.StubProvider` that handles method interception. Uses a `Map` for **O(1)** call history lookups.
+  - Supports overload-safe lookup using method signature keys (`methodName(paramType1,paramType2,...)`) with method-name fallback for backward compatibility.
 - **Interfaces**:
     - `Mock.Callback`: For dynamic `mockImplementation`.
     - `Mock.Matcher`: For custom argument matching logic.

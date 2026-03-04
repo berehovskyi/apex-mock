@@ -2,7 +2,7 @@
 
 ![](https://img.shields.io/github/v/release/berehovskyi/apex-mock?include_prereleases)
 ![](https://img.shields.io/badge/build-passing-brightgreen.svg)
-![](https://img.shields.io/badge/coverage-80%25-brightgreen.svg)
+![](https://img.shields.io/badge/coverage-90%25-brightgreen.svg)
 
 A robust, Jest-inspired mocking library for Salesforce Apex unit tests. `apex-mock` provides a fluent API for creating mocks, configuring behavior (stubs), verifying interactions, and generating test data, bringing the expressive testing patterns of Jest to the Apex ecosystem.
 
@@ -31,13 +31,13 @@ A robust, Jest-inspired mocking library for Salesforce Apex unit tests. `apex-mo
 or install as an Unlocked Package using the CLI:
 
 ```sh pkg::apex-mock
-sf package install -p 04tJ5000000D7gdIAC -o me@example.com -r -w 10
+sf package install -p 04tJ5000000D7gdIAC -o <org-alias> -r -w 10
 ```
 
 ## Features
 
 - **Mock Any Type**: Create mocks for classes and interfaces using the `System.StubProvider` API.
-- **Fluent Verification**: Verify method calls with `expect(mock).toHaveBeenCalled()` syntax.
+- **Fluent Verification**: Verify method calls with `expect(spy).toHaveBeenCalled()` or `expect(mock).toHaveBeenCalled('methodName')`.
 - **Nested Matchers**: Support for deeply nested argument matchers (`objectContaining`, `anyId`, etc.).
 - **HTTP Mocking**: Native `HttpCalloutMock` support with method and URL-specific responses.
 - **Low Overhead**: Optimized for performance with O(1) call lookup.
@@ -76,7 +76,13 @@ Mock.spyOn(mockService, 'validate').mockThrow(new MyCustomException('Invalid'));
 
 // Dynamic implementation using a callback
 Mock.spyOn(mockService, 'process').mockImplementation(new MyCallback());
+
+// Overload-specific stubbing (recommended when method names are overloaded)
+Mock.spyOn(mockService, 'doWork', new List<Type>{ String.class })
+    .mockThrow(new IllegalArgumentException('String overload only'));
 ```
+
+When stubbing overloaded methods, prefer `spyOn(stub, methodName, parameterTypes)` so behavior is scoped to the intended signature.
 
 **Available Stubbing:**
 
@@ -107,6 +113,12 @@ Mock.expect(spy).toHaveBeenCalledWith(new List<Object>{ expectedValue });
 
 // Verify an interaction did NOT happen
 Mock.expect(spy).notx.toHaveBeenCalled();
+
+// Overload-specific verification
+Mock.MethodSpy stringSpy = Mock.spyOn(mock, 'doWork', new List<Type>{ String.class });
+Mock.MethodSpy objectSpy = Mock.spyOn(mock, 'doWork', new List<Type>{ Object.class });
+Mock.expect(stringSpy).toHaveBeenCalledTimes(1);
+Mock.expect(objectSpy).toHaveBeenCalledTimes(1);
 ```
 
 **Available Verifications:**
@@ -169,7 +181,7 @@ Mock.expect(obj).toEqual(otherObj); // Value equality (==)
 |                 | `iterableContaining(item)`                                    | Matches if a List/Set contains the specified item (or matcher).      |
 |                 | `objectContaining(map)`                                       | Matches if an Object/Map/DTO contains the specified key-value pairs. |
 |                 | `sObjectContaining(sobj/map)`                                 | Matches if an SObject contains the specified field-value pairs.      |
-| **Generic**     | `any()`                                                       | Matches any non-null value.                                          |
+| **Generic**     | `any()`                                                       | Matches any value (including `null`).                                |
 
 ### Argument Matchers
 
