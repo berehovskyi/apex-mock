@@ -62,9 +62,7 @@ public class Mock {
      * @return A MethodSpy for stubbing or call history access
      */
     public static MethodSpy spyOn(Object stub, String methodName, List<Type> parameterTypes) {
-        if (!PROVIDERS.containsKey(stub)) {
-            throw new MockException('Object is not a valid Mock instance.');
-        }
+        failUnless(PROVIDERS.containsKey(stub), 'Object is not a valid Mock instance.');
         return new MethodSpy(PROVIDERS.get(stub), methodName, parameterTypes);
     }
 
@@ -364,6 +362,16 @@ public class Mock {
         return exp == act || exp?.equals(act) == true;
     }
 
+    private static void failIf(Boolean condition, String message) {
+        if (condition) {
+            throw new MockException(message);
+        }
+    }
+
+    private static void failUnless(Boolean condition, String message) {
+        failIf(!condition, message);
+    }
+
     private static Type getType(Object o) {
         return Type.forName(getTypeName(o));
     }
@@ -543,12 +551,14 @@ public class Mock {
          */
         public void toBe(Object expected) {
             validateAssertion();
-            if (!isNegated && actualValue !== expected) {
-                throw new MockException('Expected reference equality: ' + expected + ', but was: ' + actualValue);
-            }
-            if (isNegated && actualValue === expected) {
-                throw new MockException('Expected NOT reference equality: ' + expected + ', but was: ' + actualValue);
-            }
+            failIf(
+                !isNegated && actualValue !== expected,
+                'Expected reference equality: ' + expected + ', but was: ' + actualValue
+            );
+            failIf(
+                isNegated && actualValue === expected,
+                'Expected NOT reference equality: ' + expected + ', but was: ' + actualValue
+            );
         }
 
         /**
@@ -557,12 +567,14 @@ public class Mock {
          */
         public void toEqual(Object expected) {
             validateAssertion();
-            if (!isNegated && actualValue != expected) {
-                throw new MockException('Expected value equality: ' + expected + ', but was: ' + actualValue);
-            }
-            if (isNegated && actualValue == expected) {
-                throw new MockException('Expected NOT value equality: ' + expected + ', but was: ' + actualValue);
-            }
+            failIf(
+                !isNegated && actualValue != expected,
+                'Expected value equality: ' + expected + ', but was: ' + actualValue
+            );
+            failIf(
+                isNegated && actualValue == expected,
+                'Expected NOT value equality: ' + expected + ', but was: ' + actualValue
+            );
         }
 
         /**
@@ -576,12 +588,8 @@ public class Mock {
             System.Matcher m = p.matcher(actualStr);
             Boolean matches = m.find();
 
-            if (!isNegated && !matches) {
-                throw new MockException('Expected: "' + actualValue + '" to match pattern: ' + regex);
-            }
-            if (isNegated && matches) {
-                throw new MockException('Expected: "' + actualValue + '" NOT to match pattern: ' + regex);
-            }
+            failIf(!isNegated && !matches, 'Expected: "' + actualValue + '" to match pattern: ' + regex);
+            failIf(isNegated && matches, 'Expected: "' + actualValue + '" NOT to match pattern: ' + regex);
         }
 
         /**
@@ -592,12 +600,8 @@ public class Mock {
             validateAssertion();
             Boolean matches = matcher.matches(actualValue);
 
-            if (!isNegated && !matches) {
-                throw new MockException('Expected value to match ' + matcher);
-            }
-            if (isNegated && matches) {
-                throw new MockException('Expected value NOT to match ' + matcher);
-            }
+            failIf(!isNegated && !matches, 'Expected value to match ' + matcher);
+            failIf(isNegated && matches, 'Expected value NOT to match ' + matcher);
         }
 
         /**
@@ -621,12 +625,8 @@ public class Mock {
                 throw new MockException('toContain() expected an Iterable or String, but got: ' + actualValue);
             }
 
-            if (!isNegated && !contains) {
-                throw new MockException('Expected: ' + actualValue + ' to contain: ' + item);
-            }
-            if (isNegated && contains) {
-                throw new MockException('Expected: ' + actualValue + ' NOT to contain: ' + item);
-            }
+            failIf(!isNegated && !contains, 'Expected: ' + actualValue + ' to contain: ' + item);
+            failIf(isNegated && contains, 'Expected: ' + actualValue + ' NOT to contain: ' + item);
         }
 
         /**
@@ -634,12 +634,8 @@ public class Mock {
          */
         public void toBeNull() {
             validateAssertion();
-            if (!isNegated && actualValue != null) {
-                throw new MockException('Expected null, but was: ' + actualValue);
-            }
-            if (isNegated && actualValue == null) {
-                throw new MockException('Expected NOT null, but was null');
-            }
+            failIf(!isNegated && actualValue != null, 'Expected null, but was: ' + actualValue);
+            failIf(isNegated && actualValue == null, 'Expected NOT null, but was null');
         }
 
         /**
@@ -647,12 +643,8 @@ public class Mock {
          */
         public void toBeTrue() {
             validateAssertion();
-            if (!isNegated && actualValue != true) {
-                throw new MockException('Expected true, but was: ' + actualValue);
-            }
-            if (isNegated && actualValue == true) {
-                throw new MockException('Expected NOT true, but was true');
-            }
+            failIf(!isNegated && actualValue != true, 'Expected true, but was: ' + actualValue);
+            failIf(isNegated && actualValue == true, 'Expected NOT true, but was true');
         }
 
         /**
@@ -660,12 +652,8 @@ public class Mock {
          */
         public void toBeFalse() {
             validateAssertion();
-            if (!isNegated && actualValue != false) {
-                throw new MockException('Expected false, but was: ' + actualValue);
-            }
-            if (isNegated && actualValue == false) {
-                throw new MockException('Expected NOT false, but was false');
-            }
+            failIf(!isNegated && actualValue != false, 'Expected false, but was: ' + actualValue);
+            failIf(isNegated && actualValue == false, 'Expected NOT false, but was false');
         }
 
         /**
@@ -675,12 +663,8 @@ public class Mock {
         public void toBeLessThan(Decimal value) {
             validateAssertion();
             Decimal actualDec = (Decimal) actualValue;
-            if (!isNegated && !(actualDec < value)) {
-                throw new MockException('Expected ' + actualValue + ' to be less than ' + value);
-            }
-            if (isNegated && actualDec < value) {
-                throw new MockException('Expected ' + actualValue + ' NOT to be less than ' + value);
-            }
+            failIf(!isNegated && !(actualDec < value), 'Expected ' + actualValue + ' to be less than ' + value);
+            failIf(isNegated && actualDec < value, 'Expected ' + actualValue + ' NOT to be less than ' + value);
         }
 
         /**
@@ -690,24 +674,16 @@ public class Mock {
         public void toBeGreaterThan(Decimal value) {
             validateAssertion();
             Decimal actualDec = (Decimal) actualValue;
-            if (!isNegated && !(actualDec > value)) {
-                throw new MockException('Expected ' + actualValue + ' to be greater than ' + value);
-            }
-            if (isNegated && actualDec > value) {
-                throw new MockException('Expected ' + actualValue + ' NOT to be greater than ' + value);
-            }
+            failIf(!isNegated && !(actualDec > value), 'Expected ' + actualValue + ' to be greater than ' + value);
+            failIf(isNegated && actualDec > value, 'Expected ' + actualValue + ' NOT to be greater than ' + value);
         }
 
         private void validateAssertion() {
-            if (!isValueAssertion) {
-                throw new MockException('Cannot call value assertion methods on a mock verification object.');
-            }
+            failIf(!isValueAssertion, 'Cannot call value assertion methods on a mock verification object.');
         }
 
         private void validateMockVerification() {
-            if (isValueAssertion) {
-                throw new MockException('Cannot call mock verification methods on a value assertion object.');
-            }
+            failIf(isValueAssertion, 'Cannot call mock verification methods on a value assertion object.');
         }
 
         /**
@@ -716,27 +692,8 @@ public class Mock {
          */
         public MockExpectation toHaveBeenCalled() {
             validateMockVerification();
-            if (boundMethodName == null) {
-                throw new MockException('Method name must be provided when not using expect(spy).');
-            }
-            List<MethodCall> calls = getBoundCalls();
-            String prefix = getNamePrefix();
-            if (!isNegated && calls.isEmpty()) {
-                throw new MockException(
-                    prefix + 'Expected method "' + boundMethodName + '" to have been called, but it was not.'
-                );
-            }
-            if (isNegated && !calls.isEmpty()) {
-                throw new MockException(
-                    prefix +
-                        'Expected method "' +
-                        boundMethodName +
-                        '" NOT to have been called, but it was called ' +
-                        calls.size() +
-                        ' times.'
-                );
-            }
-            return this;
+            ensureBoundMethod('Method name must be provided when not using expect(spy).');
+            return verifyCalled(boundMethodName, getBoundCalls());
         }
 
         /**
@@ -746,24 +703,7 @@ public class Mock {
          */
         public MockExpectation toHaveBeenCalled(String methodName) {
             validateMockVerification();
-            List<MethodCall> calls = provider.getCalls(methodName);
-            String prefix = getNamePrefix();
-            if (!isNegated && calls.isEmpty()) {
-                throw new MockException(
-                    prefix + 'Expected method "' + methodName + '" to have been called, but it was not.'
-                );
-            }
-            if (isNegated && !calls.isEmpty()) {
-                throw new MockException(
-                    prefix +
-                        'Expected method "' +
-                        methodName +
-                        '" NOT to have been called, but it was called ' +
-                        calls.size() +
-                        ' times.'
-                );
-            }
-            return this;
+            return verifyCalled(methodName, provider.getCalls(methodName));
         }
 
         /**
@@ -773,34 +713,8 @@ public class Mock {
          */
         public MockExpectation toHaveBeenCalledTimes(Integer times) {
             validateMockVerification();
-            if (boundMethodName == null) {
-                throw new MockException('Method name must be provided when not using expect(spy).');
-            }
-            List<MethodCall> calls = getBoundCalls();
-            String prefix = getNamePrefix();
-            if (!isNegated && calls.size() != times) {
-                throw new MockException(
-                    prefix +
-                        'Expected method "' +
-                        boundMethodName +
-                        '" to have been called ' +
-                        times +
-                        ' times, but it was called ' +
-                        calls.size() +
-                        ' times.'
-                );
-            }
-            if (isNegated && calls.size() == times) {
-                throw new MockException(
-                    prefix +
-                        'Expected method "' +
-                        boundMethodName +
-                        '" NOT to have been called ' +
-                        times +
-                        ' times, but it was.'
-                );
-            }
-            return this;
+            ensureBoundMethod('Method name must be provided when not using expect(spy).');
+            return verifyCalledTimes(boundMethodName, getBoundCalls(), times);
         }
 
         /**
@@ -811,31 +725,7 @@ public class Mock {
          */
         public MockExpectation toHaveBeenCalledTimes(String methodName, Integer times) {
             validateMockVerification();
-            List<MethodCall> calls = provider.getCalls(methodName);
-            String prefix = getNamePrefix();
-            if (!isNegated && calls.size() != times) {
-                throw new MockException(
-                    prefix +
-                        'Expected method "' +
-                        methodName +
-                        '" to have been called ' +
-                        times +
-                        ' times, but it was called ' +
-                        calls.size() +
-                        ' times.'
-                );
-            }
-            if (isNegated && calls.size() == times) {
-                throw new MockException(
-                    prefix +
-                        'Expected method "' +
-                        methodName +
-                        '" NOT to have been called ' +
-                        times +
-                        ' times, but it was.'
-                );
-            }
-            return this;
+            return verifyCalledTimes(methodName, provider.getCalls(methodName), times);
         }
 
         /**
@@ -847,45 +737,8 @@ public class Mock {
          */
         public MockExpectation toHaveBeenCalledWith(List<Object> expectedArgs) {
             validateMockVerification();
-            if (boundMethodName == null) {
-                throw new MockException('Method name must be provided when not using expect(spy).');
-            }
-            List<MethodCall> calls = getBoundCalls();
-            String prefix = getNamePrefix();
-            if (!isNegated && calls.isEmpty()) {
-                throw new MockException(
-                    prefix + 'Expected method "' + boundMethodName + '" to have been called, but it was not.'
-                );
-            }
-
-            Boolean matchFound = false;
-            for (MethodCall call : calls) {
-                if (argsMatch(call.args, expectedArgs)) {
-                    matchFound = true;
-                    if (isNegated) {
-                        throw new MockException(
-                            prefix +
-                                'Expected method "' +
-                                boundMethodName +
-                                '" NOT to have been called with arguments ' +
-                                expectedArgs +
-                                ', but it was.'
-                        );
-                    }
-                    return this;
-                }
-            }
-
-            if (!isNegated && !matchFound) {
-                throw new MockException(
-                    prefix +
-                        'Expected method "' +
-                        boundMethodName +
-                        '" to have been called with matching arguments, but no matching call was found.'
-                );
-            }
-
-            return this;
+            ensureBoundMethod('Method name must be provided when not using expect(spy).');
+            return verifyCalledWith(boundMethodName, getBoundCalls(), expectedArgs);
         }
 
         /**
@@ -896,42 +749,7 @@ public class Mock {
          */
         public MockExpectation toHaveBeenCalledWith(String methodName, List<Object> expectedArgs) {
             validateMockVerification();
-            List<MethodCall> calls = provider.getCalls(methodName);
-            String prefix = getNamePrefix();
-            if (!isNegated && calls.isEmpty()) {
-                throw new MockException(
-                    prefix + 'Expected method "' + methodName + '" to have been called, but it was not.'
-                );
-            }
-
-            Boolean matchFound = false;
-            for (MethodCall call : calls) {
-                if (argsMatch(call.args, expectedArgs)) {
-                    matchFound = true;
-                    if (isNegated) {
-                        throw new MockException(
-                            prefix +
-                                'Expected method "' +
-                                methodName +
-                                '" NOT to have been called with arguments ' +
-                                expectedArgs +
-                                ', but it was.'
-                        );
-                    }
-                    return this;
-                }
-            }
-
-            if (!isNegated && !matchFound) {
-                throw new MockException(
-                    prefix +
-                        'Expected method "' +
-                        methodName +
-                        '" to have been called with matching arguments, but no matching call was found.'
-                );
-            }
-
-            return this;
+            return verifyCalledWith(methodName, provider.getCalls(methodName), expectedArgs);
         }
 
         /**
@@ -941,40 +759,29 @@ public class Mock {
          */
         public MockExpectation lastCalledWith(List<Object> expectedArgs) {
             validateMockVerification();
-            if (boundMethodName == null) {
-                throw new MockException('Method name must be provided for lastCalledWith.');
-            }
+            failIf(boundMethodName == null, 'Method name must be provided for lastCalledWith.');
             List<MethodCall> calls = getBoundCalls();
-            if (calls.isEmpty()) {
-                throw new MockException(
-                    'Expected method "' + boundMethodName + '" to have been called, but it was not.'
-                );
-            }
+            failIf(calls.isEmpty(), 'Expected method "' + boundMethodName + '" to have been called, but it was not.');
 
             MethodCall lastCall = calls.get(calls.size() - 1);
             String prefix = getNamePrefix();
             Boolean matches = argsMatch(lastCall.args, expectedArgs);
-            if (!isNegated && !matches) {
-                throw new MockException(
-                    prefix +
-                        'Expected last call to "' +
-                        boundMethodName +
-                        '" to be with ' +
-                        expectedArgs +
-                        ', but was ' +
-                        lastCall.args
-                );
-            }
-            if (isNegated && matches) {
-                throw new MockException(
-                    prefix +
-                        'Expected last call to "' +
-                        boundMethodName +
-                        '" NOT to be with ' +
-                        expectedArgs +
-                        ', but it was.'
-                );
-            }
+            verifyMatchExpectation(
+                matches,
+                prefix +
+                    'Expected last call to "' +
+                    boundMethodName +
+                    '" to be with ' +
+                    expectedArgs +
+                    ', but was ' +
+                    lastCall.args,
+                prefix +
+                    'Expected last call to "' +
+                    boundMethodName +
+                    '" NOT to be with ' +
+                    expectedArgs +
+                    ', but it was.'
+            );
             return this;
         }
 
@@ -986,45 +793,123 @@ public class Mock {
          */
         public MockExpectation nthCalledWith(Integer n, List<Object> expectedArgs) {
             validateMockVerification();
-            if (boundMethodName == null) {
-                throw new MockException('Method name must be provided for nthCalledWith.');
-            }
+            failIf(boundMethodName == null, 'Method name must be provided for nthCalledWith.');
             List<MethodCall> calls = getBoundCalls();
-            if (calls.size() < n) {
-                throw new MockException(
-                    'Expected at least ' + n + ' calls to "' + boundMethodName + '", but only found ' + calls.size()
-                );
-            }
+            failIf(
+                calls.size() < n,
+                'Expected at least ' + n + ' calls to "' + boundMethodName + '", but only found ' + calls.size()
+            );
 
             MethodCall nthCall = calls.get(n - 1); // 1-based index
             String prefix = getNamePrefix();
             Boolean matches = argsMatch(nthCall.args, expectedArgs);
-            if (!isNegated && !matches) {
-                throw new MockException(
-                    prefix +
-                        'Expected call #' +
-                        n +
-                        ' to "' +
-                        boundMethodName +
-                        '" to be with ' +
-                        expectedArgs +
-                        ', but was ' +
-                        nthCall.args
-                );
-            }
-            if (isNegated && matches) {
-                throw new MockException(
-                    prefix +
-                        'Expected call #' +
-                        n +
-                        ' to "' +
-                        boundMethodName +
-                        '" NOT to be with ' +
-                        expectedArgs +
-                        ', but it was.'
-                );
-            }
+            verifyMatchExpectation(
+                matches,
+                prefix +
+                    'Expected call #' +
+                    n +
+                    ' to "' +
+                    boundMethodName +
+                    '" to be with ' +
+                    expectedArgs +
+                    ', but was ' +
+                    nthCall.args,
+                prefix +
+                    'Expected call #' +
+                    n +
+                    ' to "' +
+                    boundMethodName +
+                    '" NOT to be with ' +
+                    expectedArgs +
+                    ', but it was.'
+            );
             return this;
+        }
+
+        private void ensureBoundMethod(String errorMessage) {
+            failIf(boundMethodName == null, errorMessage);
+        }
+
+        private MockExpectation verifyCalled(String methodName, List<MethodCall> calls) {
+            String prefix = getNamePrefix();
+            failIf(
+                !isNegated && calls.isEmpty(),
+                prefix + 'Expected method "' + methodName + '" to have been called, but it was not.'
+            );
+            failIf(
+                isNegated && !calls.isEmpty(),
+                prefix +
+                    'Expected method "' +
+                    methodName +
+                    '" NOT to have been called, but it was called ' +
+                    calls.size() +
+                    ' times.'
+            );
+            return this;
+        }
+
+        private MockExpectation verifyCalledTimes(String methodName, List<MethodCall> calls, Integer times) {
+            String prefix = getNamePrefix();
+            failIf(
+                !isNegated && calls.size() != times,
+                prefix +
+                    'Expected method "' +
+                    methodName +
+                    '" to have been called ' +
+                    times +
+                    ' times, but it was called ' +
+                    calls.size() +
+                    ' times.'
+            );
+            failIf(
+                isNegated && calls.size() == times,
+                prefix + 'Expected method "' + methodName + '" NOT to have been called ' + times + ' times, but it was.'
+            );
+            return this;
+        }
+
+        private MockExpectation verifyCalledWith(String methodName, List<MethodCall> calls, List<Object> expectedArgs) {
+            String prefix = getNamePrefix();
+            failIf(
+                !isNegated && calls.isEmpty(),
+                prefix + 'Expected method "' + methodName + '" to have been called, but it was not.'
+            );
+
+            Boolean matchFound = false;
+            for (MethodCall call : calls) {
+                if (argsMatch(call.args, expectedArgs)) {
+                    matchFound = true;
+                    failIf(
+                        isNegated,
+                        prefix +
+                            'Expected method "' +
+                            methodName +
+                            '" NOT to have been called with arguments ' +
+                            expectedArgs +
+                            ', but it was.'
+                    );
+                    return this;
+                }
+            }
+
+            failIf(
+                !isNegated && !matchFound,
+                prefix +
+                    'Expected method "' +
+                    methodName +
+                    '" to have been called with matching arguments, but no matching call was found.'
+            );
+
+            return this;
+        }
+
+        private void verifyMatchExpectation(
+            Boolean matches,
+            String positiveFailureMessage,
+            String negatedFailureMessage
+        ) {
+            failIf(!isNegated && !matches, positiveFailureMessage);
+            failIf(isNegated && matches, negatedFailureMessage);
         }
 
         private String getNamePrefix() {
@@ -1084,9 +969,7 @@ public class Mock {
          */
         public void toThrow() {
             execute();
-            if (caughtException == null) {
-                throw new MockException('Expected block to throw an exception, but it did not.');
-            }
+            failIf(caughtException == null, 'Expected block to throw an exception, but it did not.');
         }
 
         /**
@@ -1095,18 +978,14 @@ public class Mock {
          */
         public void toThrow(String message) {
             execute();
-            if (caughtException == null) {
-                throw new MockException(
-                    'Expected block to throw an exception with message containing "' +
-                        message +
-                        '", but it did not throw.'
-                );
-            }
-            if (!caughtException.getMessage().contains(message)) {
-                throw new MockException(
-                    'Expected exception message to contain "' + message + '", but got: ' + caughtException.getMessage()
-                );
-            }
+            failIf(
+                caughtException == null,
+                'Expected block to throw an exception with message containing "' + message + '", but it did not throw.'
+            );
+            failIf(
+                !caughtException.getMessage().contains(message),
+                'Expected exception message to contain "' + message + '", but got: ' + caughtException.getMessage()
+            );
         }
 
         /**
@@ -1115,19 +994,14 @@ public class Mock {
          */
         public void toThrow(Type exceptionType) {
             execute();
-            if (caughtException == null) {
-                throw new MockException(
-                    'Expected block to throw exception of type ' + exceptionType.getName() + ', but it did not throw.'
-                );
-            }
-            if (Type.forName(caughtException.getTypeName()) != exceptionType) {
-                throw new MockException(
-                    'Expected exception of type ' +
-                        exceptionType.getName() +
-                        ', but got: ' +
-                        caughtException.getTypeName()
-                );
-            }
+            failIf(
+                caughtException == null,
+                'Expected block to throw exception of type ' + exceptionType.getName() + ', but it did not throw.'
+            );
+            failIf(
+                Type.forName(caughtException.getTypeName()) != exceptionType,
+                'Expected exception of type ' + exceptionType.getName() + ', but got: ' + caughtException.getTypeName()
+            );
         }
     }
 
@@ -1819,14 +1693,11 @@ public class Mock {
          * Asserts that at least one HTTP call was made.
          */
         public void toHaveBeenCalled() {
-            if (!isNegated && targetMock.getRequests().isEmpty()) {
-                throw new MockException('Expected HTTP call, but none were made.');
-            }
-            if (isNegated && !targetMock.getRequests().isEmpty()) {
-                throw new MockException(
-                    'Expected NO HTTP calls, but ' + targetMock.getRequests().size() + ' were made.'
-                );
-            }
+            failIf(!isNegated && targetMock.getRequests().isEmpty(), 'Expected HTTP call, but none were made.');
+            failIf(
+                isNegated && !targetMock.getRequests().isEmpty(),
+                'Expected NO HTTP calls, but ' + targetMock.getRequests().size() + ' were made.'
+            );
         }
 
         /**
@@ -1835,12 +1706,8 @@ public class Mock {
          */
         public void toHaveBeenCalledTimes(Integer times) {
             Integer actual = targetMock.getRequests().size();
-            if (!isNegated && actual != times) {
-                throw new MockException('Expected ' + times + ' HTTP calls, but ' + actual + ' were made.');
-            }
-            if (isNegated && actual == times) {
-                throw new MockException('Expected NOT to have ' + times + ' HTTP calls, but it did.');
-            }
+            failIf(!isNegated && actual != times, 'Expected ' + times + ' HTTP calls, but ' + actual + ' were made.');
+            failIf(isNegated && actual == times, 'Expected NOT to have ' + times + ' HTTP calls, but it did.');
         }
 
         /**
@@ -1886,12 +1753,8 @@ public class Mock {
                 msg += ' with headers matching ' + headers;
             }
 
-            if (!isNegated && !matchFound) {
-                throw new MockException(msg + ', but no matching call was found.');
-            }
-            if (isNegated && matchFound) {
-                throw new MockException(msg + ' NOT to have been made, but it was.');
-            }
+            failIf(!isNegated && !matchFound, msg + ', but no matching call was found.');
+            failIf(isNegated && matchFound, msg + ' NOT to have been made, but it was.');
         }
 
         /**
