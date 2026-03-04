@@ -823,7 +823,8 @@ public class Mock {
 
             MethodCall lastCall = calls.get(calls.size() - 1);
             String prefix = getNamePrefix();
-            if (!argsMatch(lastCall.args, expectedArgs)) {
+            Boolean matches = argsMatch(lastCall.args, expectedArgs);
+            if (!isNegated && !matches) {
                 throw new MockException(
                     prefix +
                         'Expected last call to "' +
@@ -832,6 +833,16 @@ public class Mock {
                         expectedArgs +
                         ', but was ' +
                         lastCall.args
+                );
+            }
+            if (isNegated && matches) {
+                throw new MockException(
+                    prefix +
+                        'Expected last call to "' +
+                        boundMethodName +
+                        '" NOT to be with ' +
+                        expectedArgs +
+                        ', but it was.'
                 );
             }
             return this;
@@ -857,7 +868,8 @@ public class Mock {
 
             MethodCall nthCall = calls.get(n - 1); // 1-based index
             String prefix = getNamePrefix();
-            if (!argsMatch(nthCall.args, expectedArgs)) {
+            Boolean matches = argsMatch(nthCall.args, expectedArgs);
+            if (!isNegated && !matches) {
                 throw new MockException(
                     prefix +
                         'Expected call #' +
@@ -868,6 +880,18 @@ public class Mock {
                         expectedArgs +
                         ', but was ' +
                         nthCall.args
+                );
+            }
+            if (isNegated && matches) {
+                throw new MockException(
+                    prefix +
+                        'Expected call #' +
+                        n +
+                        ' to "' +
+                        boundMethodName +
+                        '" NOT to be with ' +
+                        expectedArgs +
+                        ', but it was.'
                 );
             }
             return this;
