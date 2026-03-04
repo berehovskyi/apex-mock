@@ -354,6 +354,40 @@ private class MockTest {
     }
 
     @IsTest
+    static void should_fail_negated_call_history_assertions_when_args_match() {
+        // Arrange
+        IMockTestService mockService = (IMockTestService) Mock.of(IMockTestService.class);
+        Mock.MethodSpy spy = Mock.spyOn(mockService, 'add');
+        mockService.add(1, 1);
+        mockService.add(2, 2);
+
+        // Act
+        Boolean lastCalledWithThrew = false;
+        try {
+            Mock.expect(spy).notx.lastCalledWith(new List<Object>{ 2, 2 });
+        } catch (Mock.MockException e) {
+            lastCalledWithThrew = true;
+        }
+
+        Boolean nthCalledWithThrew = false;
+        try {
+            Mock.expect(spy).notx.nthCalledWith(1, new List<Object>{ 1, 1 });
+        } catch (Mock.MockException e) {
+            nthCalledWithThrew = true;
+        }
+
+        // Assert
+        Assert.isTrue(
+            lastCalledWithThrew,
+            'Expected .notx.lastCalledWith to throw when last call matches, but it did not (bug).'
+        );
+        Assert.isTrue(
+            nthCalledWithThrew,
+            'Expected .notx.nthCalledWith to throw when Nth call matches, but it did not (bug).'
+        );
+    }
+
+    @IsTest
     static void should_clear_and_reset_mock() {
         // Arrange
         IMockTestService mockService = (IMockTestService) Mock.of(IMockTestService.class);
