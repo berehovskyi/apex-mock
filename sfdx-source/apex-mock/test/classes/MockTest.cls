@@ -776,6 +776,36 @@ private class MockTest {
     }
 
     @IsTest
+    static void should_support_overload_specific_spy_configuration() {
+        // Arrange
+        IMockTestService mockService = (IMockTestService) Mock.of(IMockTestService.class);
+        Mock.MethodSpy stringSpy = Mock.spyOn(mockService, 'doWork', new List<Type>{ String.class });
+        stringSpy.mockThrow(new IllegalArgumentException('String overload only'));
+        Mock.MethodSpy objectSpy = Mock.spyOn(mockService, 'doWork', new List<Type>{ Object.class });
+
+        // Act
+        Boolean stringOverloadThrew = false;
+        try {
+            mockService.doWork('hello');
+        } catch (IllegalArgumentException e) {
+            stringOverloadThrew = true;
+        }
+
+        Boolean objectOverloadThrew = false;
+        try {
+            mockService.doWork((Object) new Account(Name = 'Overload Check'));
+        } catch (IllegalArgumentException e) {
+            objectOverloadThrew = true;
+        }
+
+        // Assert
+        Assert.isTrue(stringOverloadThrew, 'Expected configured String overload to throw.');
+        Assert.isFalse(objectOverloadThrew, 'Expected Object overload not to use String-overload behavior.');
+        Mock.expect(stringSpy).toHaveBeenCalledTimes(1);
+        Mock.expect(objectSpy).toHaveBeenCalledTimes(1);
+    }
+
+    @IsTest
     static void should_verify_http_calls_advanced() {
         // Arrange
         Mock.HttpMock http = Mock.mockHttp();

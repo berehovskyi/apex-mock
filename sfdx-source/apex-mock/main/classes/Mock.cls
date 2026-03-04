@@ -51,10 +51,21 @@ public class Mock {
      * @return A MethodSpy for stubbing or call history access
      */
     public static MethodSpy spyOn(Object stub, String methodName) {
+        return spyOn(stub, methodName, null);
+    }
+
+    /**
+     * Creates a spy on a specific method overload of a mock object.
+     * @param stub The mock object created by Mock.of()
+     * @param methodName The name of the method to spy on
+     * @param parameterTypes The parameter types that identify the overload
+     * @return A MethodSpy for stubbing or call history access
+     */
+    public static MethodSpy spyOn(Object stub, String methodName, List<Type> parameterTypes) {
         if (!PROVIDERS.containsKey(stub)) {
             throw new MockException('Object is not a valid Mock instance.');
         }
-        return new MethodSpy(PROVIDERS.get(stub), methodName);
+        return new MethodSpy(PROVIDERS.get(stub), methodName, parameterTypes);
     }
 
     /**
@@ -115,7 +126,7 @@ public class Mock {
      * @return A MockExpectation for verification
      */
     public static MockExpectation expect(MethodSpy spy) {
-        return new MockExpectation(spy.provider, spy.methodName);
+        return new MockExpectation(spy.provider, spy.methodName, spy.methodKey, spy.hasSignature);
     }
 
     /**
@@ -368,16 +379,35 @@ public class Mock {
         }
     }
 
+    private static String buildMethodKey(String methodName, List<Type> parameterTypes) {
+        if (parameterTypes == null) {
+            return methodName;
+        }
+        List<String> typeNames = new List<String>();
+        for (Type paramType : parameterTypes) {
+            typeNames.add(paramType?.getName() ?? 'null');
+        }
+        return methodName + '(' + String.join(typeNames, ',') + ')';
+    }
+
     /**
      * Fluent builder for configuring method return values and behaviors.
      */
     public class MethodSpy {
         public final MockProvider provider;
         public final String methodName;
+        public final String methodKey;
+        public final Boolean hasSignature;
 
         private MethodSpy(MockProvider provider, String methodName) {
+            this(provider, methodName, null);
+        }
+
+        private MethodSpy(MockProvider provider, String methodName, List<Type> parameterTypes) {
             this.provider = provider;
             this.methodName = methodName;
+            this.hasSignature = parameterTypes != null;
+            this.methodKey = hasSignature ? buildMethodKey(methodName, parameterTypes) : methodName;
         }
 
         /**
@@ -386,7 +416,10 @@ public class Mock {
         public List<List<Object>> calls {
             get {
                 List<List<Object>> history = new List<List<Object>>();
-                for (MethodCall call : provider.getCalls(methodName)) {
+                List<MethodCall> methodCalls = hasSignature
+                    ? provider.getCallsByKey(methodKey)
+                    : provider.getCalls(methodName);
+                for (MethodCall call : methodCalls) {
                     history.add(call.args);
                 }
                 return history;
@@ -399,7 +432,7 @@ public class Mock {
          * @return This spy instance for chaining
          */
         public MethodSpy mockReturnValue(Object value) {
-            provider.setReturnValue(methodName, value);
+            provider.setReturnValue(methodKey, value);
             return this;
         }
 
@@ -410,7 +443,7 @@ public class Mock {
          * @return This spy instance for chaining
          */
         public MethodSpy mockReturnValueOnce(Object value) {
-            provider.addReturnValueOnce(methodName, value);
+            provider.addReturnValueOnce(methodKey, value);
             return this;
         }
 
@@ -420,7 +453,7 @@ public class Mock {
          * @return This spy instance for chaining
          */
         public MethodSpy mockThrow(Exception error) {
-            provider.setException(methodName, error);
+            provider.setException(methodKey, error);
             return this;
         }
 
@@ -432,7 +465,7 @@ public class Mock {
          * spy.mockImplementation(new MyCallback());
          */
         public MethodSpy mockImplementation(Callback callback) {
-            provider.setCallback(methodName, callback);
+            provider.setCallback(methodKey, callback);
             return this;
         }
     }
@@ -443,21 +476,36 @@ public class Mock {
     public class MockExpectation {
         private final MockProvider provider;
         private final String boundMethodName;
+        private final String boundMethodKey;
+        private final Boolean boundHasSignature;
         private final Boolean isNegated;
         private final Object actualValue;
         private final Boolean isValueAssertion;
 
         private MockExpectation(MockProvider provider) {
-            this(provider, null, false);
+            this(provider, null, null, false, false);
         }
 
-        private MockExpectation(MockProvider provider, String boundMethodName) {
-            this(provider, boundMethodName, false);
+        private MockExpectation(
+            MockProvider provider,
+            String boundMethodName,
+            String boundMethodKey,
+            Boolean boundHasSignature
+        ) {
+            this(provider, boundMethodName, boundMethodKey, boundHasSignature, false);
         }
 
-        private MockExpectation(MockProvider provider, String boundMethodName, Boolean isNegated) {
+        private MockExpectation(
+            MockProvider provider,
+            String boundMethodName,
+            String boundMethodKey,
+            Boolean boundHasSignature,
+            Boolean isNegated
+        ) {
             this.provider = provider;
             this.boundMethodName = boundMethodName;
+            this.boundMethodKey = boundMethodKey;
+            this.boundHasSignature = boundHasSignature;
             this.isNegated = isNegated;
             this.actualValue = null;
             this.isValueAssertion = false;
@@ -466,6 +514,8 @@ public class Mock {
         private MockExpectation(Object actualValue, Boolean isNegated) {
             this.provider = null;
             this.boundMethodName = null;
+            this.boundMethodKey = null;
+            this.boundHasSignature = false;
             this.isNegated = isNegated;
             this.actualValue = actualValue;
             this.isValueAssertion = true;
@@ -479,8 +529,12 @@ public class Mock {
                 if (isValueAssertion) {
                     return new MockExpectation(actualValue, !isNegated);
                 }
-                return new MockExpectation(provider, boundMethodName, !isNegated);
+                return new MockExpectation(provider, boundMethodName, boundMethodKey, boundHasSignature, !isNegated);
             }
+        }
+
+        private List<MethodCall> getBoundCalls() {
+            return boundHasSignature ? provider.getCallsByKey(boundMethodKey) : provider.getCalls(boundMethodName);
         }
 
         /**
@@ -665,7 +719,24 @@ public class Mock {
             if (boundMethodName == null) {
                 throw new MockException('Method name must be provided when not using expect(spy).');
             }
-            return toHaveBeenCalled(boundMethodName);
+            List<MethodCall> calls = getBoundCalls();
+            String prefix = getNamePrefix();
+            if (!isNegated && calls.isEmpty()) {
+                throw new MockException(
+                    prefix + 'Expected method "' + boundMethodName + '" to have been called, but it was not.'
+                );
+            }
+            if (isNegated && !calls.isEmpty()) {
+                throw new MockException(
+                    prefix +
+                        'Expected method "' +
+                        boundMethodName +
+                        '" NOT to have been called, but it was called ' +
+                        calls.size() +
+                        ' times.'
+                );
+            }
+            return this;
         }
 
         /**
@@ -705,7 +776,31 @@ public class Mock {
             if (boundMethodName == null) {
                 throw new MockException('Method name must be provided when not using expect(spy).');
             }
-            return toHaveBeenCalledTimes(boundMethodName, times);
+            List<MethodCall> calls = getBoundCalls();
+            String prefix = getNamePrefix();
+            if (!isNegated && calls.size() != times) {
+                throw new MockException(
+                    prefix +
+                        'Expected method "' +
+                        boundMethodName +
+                        '" to have been called ' +
+                        times +
+                        ' times, but it was called ' +
+                        calls.size() +
+                        ' times.'
+                );
+            }
+            if (isNegated && calls.size() == times) {
+                throw new MockException(
+                    prefix +
+                        'Expected method "' +
+                        boundMethodName +
+                        '" NOT to have been called ' +
+                        times +
+                        ' times, but it was.'
+                );
+            }
+            return this;
         }
 
         /**
@@ -755,7 +850,42 @@ public class Mock {
             if (boundMethodName == null) {
                 throw new MockException('Method name must be provided when not using expect(spy).');
             }
-            return toHaveBeenCalledWith(boundMethodName, expectedArgs);
+            List<MethodCall> calls = getBoundCalls();
+            String prefix = getNamePrefix();
+            if (!isNegated && calls.isEmpty()) {
+                throw new MockException(
+                    prefix + 'Expected method "' + boundMethodName + '" to have been called, but it was not.'
+                );
+            }
+
+            Boolean matchFound = false;
+            for (MethodCall call : calls) {
+                if (argsMatch(call.args, expectedArgs)) {
+                    matchFound = true;
+                    if (isNegated) {
+                        throw new MockException(
+                            prefix +
+                                'Expected method "' +
+                                boundMethodName +
+                                '" NOT to have been called with arguments ' +
+                                expectedArgs +
+                                ', but it was.'
+                        );
+                    }
+                    return this;
+                }
+            }
+
+            if (!isNegated && !matchFound) {
+                throw new MockException(
+                    prefix +
+                        'Expected method "' +
+                        boundMethodName +
+                        '" to have been called with matching arguments, but no matching call was found.'
+                );
+            }
+
+            return this;
         }
 
         /**
@@ -814,7 +944,7 @@ public class Mock {
             if (boundMethodName == null) {
                 throw new MockException('Method name must be provided for lastCalledWith.');
             }
-            List<MethodCall> calls = provider.getCalls(boundMethodName);
+            List<MethodCall> calls = getBoundCalls();
             if (calls.isEmpty()) {
                 throw new MockException(
                     'Expected method "' + boundMethodName + '" to have been called, but it was not.'
@@ -859,7 +989,7 @@ public class Mock {
             if (boundMethodName == null) {
                 throw new MockException('Method name must be provided for nthCalledWith.');
             }
-            List<MethodCall> calls = provider.getCalls(boundMethodName);
+            List<MethodCall> calls = getBoundCalls();
             if (calls.size() < n) {
                 throw new MockException(
                     'Expected at least ' + n + ' calls to "' + boundMethodName + '", but only found ' + calls.size()
@@ -1030,6 +1160,7 @@ public class Mock {
         private final Map<String, Exception> exceptions = new Map<String, Exception>();
         private final Map<String, Callback> callbacks = new Map<String, Callback>();
         private final Map<String, List<MethodCall>> callsByMethod = new Map<String, List<MethodCall>>();
+        private final Map<String, List<MethodCall>> callsByKey = new Map<String, List<MethodCall>>();
         private final List<MethodCall> calls = new List<MethodCall>();
         public final String mockName;
 
@@ -1086,6 +1217,7 @@ public class Mock {
         public void clear() {
             calls.clear();
             callsByMethod.clear();
+            callsByKey.clear();
         }
 
         /**
@@ -1094,6 +1226,7 @@ public class Mock {
         public void reset() {
             calls.clear();
             callsByMethod.clear();
+            callsByKey.clear();
             returnValues.clear();
             returnValuesOnce.clear();
             exceptions.clear();
@@ -1107,6 +1240,15 @@ public class Mock {
          */
         public List<MethodCall> getCalls(String methodName) {
             return callsByMethod.get(methodName) ?? new List<MethodCall>();
+        }
+
+        /**
+         * Returns calls for an exact method key (name + signature).
+         * @param methodKey Method key
+         * @return List of MethodCalls
+         */
+        public List<MethodCall> getCallsByKey(String methodKey) {
+            return callsByKey.get(methodKey) ?? new List<MethodCall>();
         }
 
         /**
@@ -1127,6 +1269,8 @@ public class Mock {
             List<String> listOfParamNames,
             List<Object> listOfArgs
         ) {
+            String methodKey = buildMethodKey(stubbedMethodName, listOfParamTypes);
+
             // Record the call
             MethodCall call = new MethodCall(stubbedMethodName, listOfArgs);
             calls.add(call);
@@ -1134,18 +1278,34 @@ public class Mock {
                 callsByMethod.put(stubbedMethodName, new List<MethodCall>());
             }
             callsByMethod.get(stubbedMethodName).add(call);
+            if (!callsByKey.containsKey(methodKey)) {
+                callsByKey.put(methodKey, new List<MethodCall>());
+            }
+            callsByKey.get(methodKey).add(call);
 
             // Check if we should throw an exception
+            if (exceptions.containsKey(methodKey)) {
+                throw exceptions.get(methodKey);
+            }
             if (exceptions.containsKey(stubbedMethodName)) {
                 throw exceptions.get(stubbedMethodName);
             }
 
             // Check for callbacks
+            if (callbacks.containsKey(methodKey)) {
+                return callbacks.get(methodKey).call(listOfArgs);
+            }
             if (callbacks.containsKey(stubbedMethodName)) {
                 return callbacks.get(stubbedMethodName).call(listOfArgs);
             }
 
             // Check for one-time return values first
+            if (returnValuesOnce.containsKey(methodKey)) {
+                List<Object> onceValuesByKey = returnValuesOnce.get(methodKey);
+                if (!onceValuesByKey.isEmpty()) {
+                    return onceValuesByKey.remove(0);
+                }
+            }
             if (returnValuesOnce.containsKey(stubbedMethodName)) {
                 List<Object> onceValues = returnValuesOnce.get(stubbedMethodName);
                 if (!onceValues.isEmpty()) {
@@ -1154,6 +1314,9 @@ public class Mock {
             }
 
             // Fall back to persistent return value
+            if (returnValues.containsKey(methodKey)) {
+                return returnValues.get(methodKey);
+            }
             return returnValues.get(stubbedMethodName);
         }
     }
