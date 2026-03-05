@@ -806,6 +806,122 @@ private class MockTest {
     }
 
     @IsTest
+    static void should_verify_return_outcome_assertions() {
+        // Arrange
+        IMockTestService mockService = (IMockTestService) Mock.of(IMockTestService.class);
+        Mock.MethodSpy spy = Mock.spyOn(mockService, 'add');
+        spy.mockImplementation(new ReturnOrThrowByFirstArg());
+
+        // Act
+        Assert.areEqual(3, mockService.add(1, 2), 'First call should return from callback');
+        try {
+            mockService.add(-1, 5);
+            Assert.fail('Second call should throw from callback');
+        } catch (IllegalArgumentException e) {
+            Assert.isTrue(e.getMessage().contains('Sentinel throw'));
+        }
+        Assert.areEqual(9, mockService.add(4, 5), 'Third call should return from callback');
+
+        // Assert - spy-based API
+        Mock.expect(spy).toHaveReturned();
+        Mock.expect(spy).toHaveReturnedTimes(2);
+        Mock.expect(spy).toHaveReturnedWith(3);
+        Mock.expect(spy).toHaveNthReturnedWith(1, 3);
+        Mock.expect(spy).toHaveNthReturnedWith(3, 9);
+        Mock.expect(spy).notx.toHaveReturnedWith(100);
+
+        // Assert - mock+methodName API
+        Mock.expect(mockService).toHaveReturned('add');
+        Mock.expect(mockService).toHaveReturnedTimes('add', 2);
+        Mock.expect(mockService).toHaveReturnedWith('add', 9);
+        Mock.expect(mockService).toHaveNthReturnedWith('add', 1, 3);
+    }
+
+    @IsTest
+    static void should_fail_to_have_nth_returned_with_when_nth_call_throws() {
+        // Arrange
+        IMockTestService mockService = (IMockTestService) Mock.of(IMockTestService.class);
+        Mock.MethodSpy spy = Mock.spyOn(mockService, 'add');
+        spy.mockImplementation(new ReturnOrThrowByFirstArg());
+
+        // Act
+        mockService.add(1, 2);
+        try {
+            mockService.add(-1, 0);
+            Assert.fail('Expected callback to throw on sentinel input');
+        } catch (IllegalArgumentException e) {
+            Assert.isTrue(e.getMessage().contains('Sentinel throw'));
+        }
+
+        // Assert
+        try {
+            Mock.expect(spy).toHaveNthReturnedWith(2, 0);
+            Assert.fail('Should fail because the second call threw');
+        } catch (Mock.MockException e) {
+            Assert.isTrue(e.getMessage().contains('but it threw.'));
+        }
+    }
+
+    @IsTest
+    static void should_treat_void_calls_as_successful_null_returns() {
+        // Arrange
+        IMockTestService mockService = (IMockTestService) Mock.of(IMockTestService.class);
+        Mock.MethodSpy stringSpy = Mock.spyOn(mockService, 'doWork', new List<Type>{ String.class });
+
+        // Act
+        mockService.doWork('noop');
+
+        // Assert
+        Mock.expect(stringSpy).toHaveReturned();
+        Mock.expect(stringSpy).toHaveReturnedTimes(1);
+        Mock.expect(stringSpy).toHaveReturnedWith(null);
+        Mock.expect(stringSpy).toHaveNthReturnedWith(1, null);
+        Mock.expect(stringSpy).notx.toHaveNthReturnedWith(1, 'unexpected');
+    }
+
+    @IsTest
+    static void should_verify_last_returned_with() {
+        // Arrange
+        IMockTestService mockService = (IMockTestService) Mock.of(IMockTestService.class);
+        Mock.MethodSpy spy = Mock.spyOn(mockService, 'add');
+        spy.mockImplementation(new ReturnOrThrowByFirstArg());
+
+        // Act
+        mockService.add(1, 2); // 3
+        mockService.add(2, 3); // 5
+
+        // Assert
+        Mock.expect(spy).toHaveLastReturnedWith(5);
+        Mock.expect(spy).notx.toHaveLastReturnedWith(3);
+        Mock.expect(mockService).toHaveLastReturnedWith('add', 5);
+    }
+
+    @IsTest
+    static void should_fail_last_returned_with_when_last_call_throws() {
+        // Arrange
+        IMockTestService mockService = (IMockTestService) Mock.of(IMockTestService.class);
+        Mock.MethodSpy spy = Mock.spyOn(mockService, 'add');
+        spy.mockImplementation(new ReturnOrThrowByFirstArg());
+
+        // Act
+        mockService.add(1, 2);
+        try {
+            mockService.add(-1, 0);
+            Assert.fail('Expected callback to throw on sentinel input');
+        } catch (IllegalArgumentException e) {
+            Assert.isTrue(e.getMessage().contains('Sentinel throw'));
+        }
+
+        // Assert
+        try {
+            Mock.expect(spy).toHaveLastReturnedWith(0);
+            Assert.fail('Should fail because the last call threw');
+        } catch (Mock.MockException e) {
+            Assert.isTrue(e.getMessage().contains('but it threw.'));
+        }
+    }
+
+    @IsTest
     static void should_verify_http_calls_advanced() {
         // Arrange
         Mock.HttpMock http = Mock.mockHttp();
@@ -1182,6 +1298,17 @@ private class MockTest {
         public Object call(List<Object> args) {
             Integer input = (Integer) args[0];
             return input * 2;
+        }
+    }
+
+    public class ReturnOrThrowByFirstArg implements Mock.Callback {
+        public Object call(List<Object> args) {
+            Integer first = (Integer) args[0];
+            Integer second = (Integer) args[1];
+            if (first == -1) {
+                throw new IllegalArgumentException('Sentinel throw');
+            }
+            return first + second;
         }
     }
 
