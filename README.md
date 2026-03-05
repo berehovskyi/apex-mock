@@ -2,7 +2,7 @@
 
 ![](https://img.shields.io/github/v/release/berehovskyi/apex-mock?include_prereleases)
 ![](https://img.shields.io/badge/build-passing-brightgreen.svg)
-![](https://img.shields.io/badge/coverage-90%25-brightgreen.svg)
+![](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)
 
 A robust, Jest-inspired mocking library for Salesforce Apex unit tests. `apex-mock` provides a fluent API for creating mocks, configuring behavior (stubs), verifying interactions, and generating test data, bringing the expressive testing patterns of Jest to the Apex ecosystem.
 
@@ -31,7 +31,7 @@ A robust, Jest-inspired mocking library for Salesforce Apex unit tests. `apex-mo
 or install as an Unlocked Package using the CLI:
 
 ```sh pkg::apex-mock
-sf package install -p 04tJ5000000D7gdIAC -o <org-alias> -r -w 10
+sf package install -p 04tJ5000000D9w2IAC -o <org-alias> -r -w 10
 ```
 
 ## Features
