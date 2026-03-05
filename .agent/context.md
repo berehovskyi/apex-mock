@@ -45,6 +45,25 @@ Configure mock behavior using `spyOn`. Support for sequential returns, exception
         .mockThrow(new MyException('String overload only'));
     ```
 
+- **Argument-Scoped Stubbing**:
+
+    ```apex
+    Mock.spyOn(mock, 'add')
+        .whenCalledWith(new List<Object>{ 1, 2 })
+        .mockReturnValue(3);
+
+    Mock.spyOn(mock, 'add')
+        .whenCalledWith(new List<Object>{ Mock.anyInteger(), 0 })
+        .mockThrow(new IllegalArgumentException('Second arg cannot be zero'));
+
+    Mock.spyOn(mock, 'add')
+        .whenCalledWith(new List<Object>{ 10, 20 })
+        .mockImplementationOnce(new MyCallback())
+        .mockReturnValue(31);
+    ```
+
+`whenCalledWith(...)` supports matchers in argument lists and takes precedence over method-level stubs when arguments match.
+
 ### 3. Verification
 
 Verify method calls with Jest-like `expect` syntax. Supports both explicit mock verification and spy-based verification.

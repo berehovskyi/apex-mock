@@ -67,6 +67,159 @@ private class MockTest {
         Assert.areEqual(null, mockService.getValue(), 'Second call should return null');
     }
 
+    @IsTest
+    static void should_support_argument_scoped_return_stubbing() {
+        // Arrange
+        IMockTestService mockService = (IMockTestService) Mock.of(IMockTestService.class);
+        Mock.MethodSpy addSpy = Mock.spyOn(mockService, 'add');
+        addSpy.mockReturnValue(999);
+        addSpy.whenCalledWith(new List<Object>{ 1, 2 }).mockReturnValue(3);
+
+        // Act & Assert
+        Assert.areEqual(3, mockService.add(1, 2), 'Expected argument-scoped stubbing to win over default stub.');
+        Assert.areEqual(999, mockService.add(5, 5), 'Expected default method stub for non-matching arguments.');
+    }
+
+    @IsTest
+    static void should_support_argument_scoped_matcher_stubbing() {
+        // Arrange
+        IMockTestService mockService = (IMockTestService) Mock.of(IMockTestService.class);
+        Mock.spyOn(mockService, 'add')
+            .whenCalledWith(new List<Object>{ Mock.anyInteger(), 0 })
+            .mockThrow(new IllegalArgumentException('Second arg cannot be zero'));
+
+        // Act & Assert
+        Boolean threw = false;
+        try {
+            mockService.add(7, 0);
+        } catch (IllegalArgumentException e) {
+            threw = true;
+            Assert.isTrue(e.getMessage().contains('cannot be zero'));
+        }
+        Assert.isTrue(threw, 'Expected matcher-based argument scope to throw for matching args.');
+        Assert.areEqual(null, mockService.add(7, 1), 'Expected non-matching args to use default behavior.');
+    }
+
+    @IsTest
+    static void should_support_argument_scoped_mock_implementation_once() {
+        // Arrange
+        IMockTestService mockService = (IMockTestService) Mock.of(IMockTestService.class);
+        Mock.spyOn(mockService, 'add')
+            .whenCalledWith(new List<Object>{ 10, 20 })
+            .mockImplementationOnce(new AddWithOffset(5))
+            .mockReturnValue(31);
+
+        // Act & Assert
+        Assert.areEqual(35, mockService.add(10, 20), 'Expected one-time implementation to run first.');
+        Assert.areEqual(31, mockService.add(10, 20), 'Expected scoped default value after once callback is consumed.');
+        Assert.areEqual(31, mockService.add(10, 20), 'Expected scoped default to remain active.');
+    }
+
+    @IsTest
+    static void should_support_argument_scoped_stubbing_with_signature_spy() {
+        // Arrange
+        IMockTestService mockService = (IMockTestService) Mock.of(IMockTestService.class);
+        Mock.spyOn(mockService, 'doWork', new List<Type>{ String.class })
+            .whenCalledWith(new List<Object>{ 'boom' })
+            .mockThrow(new IllegalArgumentException('String overload scoped throw'));
+
+        // Act
+        Boolean stringOverloadThrew = false;
+        try {
+            mockService.doWork('boom');
+        } catch (IllegalArgumentException e) {
+            stringOverloadThrew = true;
+        }
+
+        Boolean objectOverloadThrew = false;
+        try {
+            mockService.doWork((Object) 'boom');
+        } catch (IllegalArgumentException e) {
+            objectOverloadThrew = true;
+        }
+
+        // Assert
+        Assert.isTrue(stringOverloadThrew, 'Expected argument-scoped behavior on String overload.');
+        Assert.isFalse(objectOverloadThrew, 'Expected Object overload not to use String-overload scoped behavior.');
+    }
+
+    @IsTest
+    static void should_support_argument_scoped_return_value_once() {
+        // Arrange
+        IMockTestService mockService = (IMockTestService) Mock.of(IMockTestService.class);
+        Mock.MethodSpy addSpy = Mock.spyOn(mockService, 'add');
+        addSpy.mockReturnValue(999);
+        addSpy.whenCalledWith(new List<Object>{ 2, 2 }).mockReturnValueOnce(4).mockReturnValue(22);
+
+        // Act & Assert
+        Assert.areEqual(4, mockService.add(2, 2), 'Expected scoped once value on first matching call.');
+        Assert.areEqual(22, mockService.add(2, 2), 'Expected scoped default value after once value is consumed.');
+        Assert.areEqual(999, mockService.add(5, 5), 'Expected method-level fallback for non-matching arguments.');
+    }
+
+    @IsTest
+    static void should_support_argument_scoped_throw_once() {
+        // Arrange
+        IMockTestService mockService = (IMockTestService) Mock.of(IMockTestService.class);
+        Mock.spyOn(mockService, 'add')
+            .whenCalledWith(new List<Object>{ 3, 0 })
+            .mockThrowOnce(new IllegalArgumentException('Throw only once'))
+            .mockReturnValue(30);
+
+        // Act & Assert
+        Boolean threw = false;
+        try {
+            mockService.add(3, 0);
+        } catch (IllegalArgumentException e) {
+            threw = true;
+            Assert.isTrue(e.getMessage().contains('only once'));
+        }
+        Assert.isTrue(threw, 'Expected scoped throw-once behavior on first matching call.');
+        Assert.areEqual(30, mockService.add(3, 0), 'Expected scoped fallback value after throw-once is consumed.');
+    }
+
+    @IsTest
+    static void should_support_argument_scoped_persistent_callback() {
+        // Arrange
+        IMockTestService mockService = (IMockTestService) Mock.of(IMockTestService.class);
+        Mock.spyOn(mockService, 'add')
+            .whenCalledWith(new List<Object>{ 4, 4 })
+            .mockImplementation(new AddWithOffset(1));
+
+        // Act & Assert
+        Assert.areEqual(9, mockService.add(4, 4), 'Expected scoped callback result on first match.');
+        Assert.areEqual(9, mockService.add(4, 4), 'Expected scoped callback to stay active.');
+    }
+
+    @IsTest
+    static void should_handle_null_and_mismatched_argument_shapes_in_scoped_matching() {
+        // Arrange
+        IMockTestService mockService = (IMockTestService) Mock.of(IMockTestService.class);
+        Mock.MethodSpy getValueSpy = Mock.spyOn(mockService, 'getValue');
+        getValueSpy.whenCalledWith(null).mockReturnValue('NULL_ARGS');
+        getValueSpy.whenCalledWith(new List<Object>()).mockReturnValue('EMPTY_ARGS');
+
+        Mock.MethodSpy addSpy = Mock.spyOn(mockService, 'add');
+        addSpy.mockReturnValue(77);
+        addSpy.whenCalledWith(null).mockReturnValue(11);
+        addSpy.whenCalledWith(new List<Object>{ 1 }).mockReturnValue(12);
+
+        // Act
+        String noArgResult = mockService.getValue();
+        Integer addResult = mockService.add(1, 1);
+
+        // Assert
+        Assert.isTrue(
+            noArgResult == 'NULL_ARGS' || noArgResult == 'EMPTY_ARGS',
+            'No-arg calls should match one supported argument shape.'
+        );
+        Assert.areEqual(
+            77,
+            addResult,
+            'Null or different-size scoped argument patterns should not match two-arg method calls.'
+        );
+    }
+
     // Verification Tests
     @IsTest
     static void should_verify_method_was_called() {
@@ -1298,6 +1451,18 @@ private class MockTest {
         public Object call(List<Object> args) {
             Integer input = (Integer) args[0];
             return input * 2;
+        }
+    }
+
+    public class AddWithOffset implements Mock.Callback {
+        private final Integer offset;
+        public AddWithOffset(Integer offset) {
+            this.offset = offset;
+        }
+        public Object call(List<Object> args) {
+            Integer first = (Integer) args[0];
+            Integer second = (Integer) args[1];
+            return first + second + offset;
         }
     }
 

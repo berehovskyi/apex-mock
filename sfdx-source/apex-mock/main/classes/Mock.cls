@@ -362,6 +362,21 @@ public class Mock {
         return exp == act || exp?.equals(act) == true;
     }
 
+    private static Boolean argsMatchValues(List<Object> actual, List<Object> expected) {
+        if (actual == null || expected == null) {
+            return actual == expected;
+        }
+        if (actual.size() != expected.size()) {
+            return false;
+        }
+        for (Integer i = 0; i < expected.size(); i++) {
+            if (!valuesMatch(actual[i], expected[i])) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     private static void failIf(Boolean condition, String message) {
         if (condition) {
             throw new MockException(message);
@@ -406,10 +421,6 @@ public class Mock {
         public final String methodName;
         public final String methodKey;
         public final Boolean hasSignature;
-
-        private MethodSpy(MockProvider provider, String methodName) {
-            this(provider, methodName, null);
-        }
 
         private MethodSpy(MockProvider provider, String methodName, List<Type> parameterTypes) {
             this.provider = provider;
@@ -474,6 +485,95 @@ public class Mock {
          */
         public MethodSpy mockImplementation(Callback callback) {
             provider.setCallback(methodKey, callback);
+            return this;
+        }
+
+        /**
+         * Creates argument-scoped stubbing for this method.
+         * Matchers are supported in the expected arguments list.
+         * @param expectedArgs Expected argument list
+         * @return Scoped stubbing builder
+         * @example
+         * Mock.spyOn(mock, 'add')
+         *     .whenCalledWith(new List<Object>{ 1, 2 })
+         *     .mockReturnValue(3);
+         */
+        public WhenCalledWithStub whenCalledWith(List<Object> expectedArgs) {
+            return new WhenCalledWithStub(provider.addConditionalBehavior(methodKey, expectedArgs));
+        }
+    }
+
+    /**
+     * Fluent builder for configuring behavior for specific argument patterns.
+     */
+    public class WhenCalledWithStub {
+        private final ConditionalBehavior behavior;
+
+        private WhenCalledWithStub(ConditionalBehavior behavior) {
+            this.behavior = behavior;
+        }
+
+        /**
+         * Configures a persistent return value for this argument pattern.
+         * @param value Value to return
+         * @return This scoped builder
+         */
+        public WhenCalledWithStub mockReturnValue(Object value) {
+            return setDefaultAction(value, null, null);
+        }
+
+        /**
+         * Configures a one-time return value for this argument pattern.
+         * @param value Value to return once
+         * @return This scoped builder
+         */
+        public WhenCalledWithStub mockReturnValueOnce(Object value) {
+            return addOnceAction(value, null, null);
+        }
+
+        /**
+         * Configures a persistent exception for this argument pattern.
+         * @param error Exception to throw
+         * @return This scoped builder
+         */
+        public WhenCalledWithStub mockThrow(Exception error) {
+            return setDefaultAction(null, error, null);
+        }
+
+        /**
+         * Configures a one-time exception for this argument pattern.
+         * @param error Exception to throw once
+         * @return This scoped builder
+         */
+        public WhenCalledWithStub mockThrowOnce(Exception error) {
+            return addOnceAction(null, error, null);
+        }
+
+        /**
+         * Configures a persistent callback for this argument pattern.
+         * @param callback Callback implementation
+         * @return This scoped builder
+         */
+        public WhenCalledWithStub mockImplementation(Callback callback) {
+            return setDefaultAction(null, null, callback);
+        }
+
+        /**
+         * Configures a one-time callback for this argument pattern.
+         * @param callback Callback implementation used once
+         * @return This scoped builder
+         */
+        public WhenCalledWithStub mockImplementationOnce(Callback callback) {
+            return addOnceAction(null, null, callback);
+        }
+
+        private WhenCalledWithStub setDefaultAction(Object returnValue, Exception error, Callback callback) {
+            behavior.setDefaultAction(new ConditionalAction(returnValue, error, callback));
+            return this;
+        }
+
+        private WhenCalledWithStub addOnceAction(Object returnValue, Exception error, Callback callback) {
+            behavior.addOnceAction(new ConditionalAction(returnValue, error, callback));
             return this;
         }
     }
@@ -1187,22 +1287,7 @@ public class Mock {
         }
 
         private Boolean argsMatch(List<Object> actual, List<Object> expected) {
-            if (actual == null && expected == null) {
-                return true;
-            }
-            if (actual == null || expected == null) {
-                return false;
-            }
-            if (actual.size() != expected.size()) {
-                return false;
-            }
-
-            for (Integer i = 0; i < expected.size(); i++) {
-                if (!valuesMatch(actual[i], expected[i])) {
-                    return false;
-                }
-            }
-            return true;
+            return argsMatchValues(actual, expected);
         }
     }
 
@@ -1326,6 +1411,7 @@ public class Mock {
         private final Map<String, List<Object>> returnValuesOnce = new Map<String, List<Object>>();
         private final Map<String, Exception> exceptions = new Map<String, Exception>();
         private final Map<String, Callback> callbacks = new Map<String, Callback>();
+        private final Map<String, List<ConditionalBehavior>> conditionalBehaviorsByMethod = new Map<String, List<ConditionalBehavior>>();
         private final Map<String, List<MethodCall>> callsByMethod = new Map<String, List<MethodCall>>();
         private final Map<String, List<MethodCall>> callsByKey = new Map<String, List<MethodCall>>();
         private final List<MethodCall> calls = new List<MethodCall>();
@@ -1379,6 +1465,21 @@ public class Mock {
         }
 
         /**
+         * Adds a conditional behavior for a method key and expected arguments.
+         * @param methodKey Method name or signature key
+         * @param expectedArgs Expected arguments
+         * @return Configurable conditional behavior
+         */
+        private ConditionalBehavior addConditionalBehavior(String methodKey, List<Object> expectedArgs) {
+            if (!conditionalBehaviorsByMethod.containsKey(methodKey)) {
+                conditionalBehaviorsByMethod.put(methodKey, new List<ConditionalBehavior>());
+            }
+            ConditionalBehavior behavior = new ConditionalBehavior(expectedArgs);
+            conditionalBehaviorsByMethod.get(methodKey).add(behavior);
+            return behavior;
+        }
+
+        /**
          * Clears call history.
          */
         public void clear() {
@@ -1398,6 +1499,7 @@ public class Mock {
             returnValuesOnce.clear();
             exceptions.clear();
             callbacks.clear();
+            conditionalBehaviorsByMethod.clear();
         }
 
         /**
@@ -1416,6 +1518,32 @@ public class Mock {
          */
         public List<MethodCall> getCallsByKey(String methodKey) {
             return callsByKey.get(methodKey) ?? new List<MethodCall>();
+        }
+
+        private ConditionalAction consumeConditionalAction(String methodNameOrKey, List<Object> actualArgs) {
+            List<ConditionalBehavior> behaviors = conditionalBehaviorsByMethod.get(methodNameOrKey);
+            if (behaviors == null) {
+                return null;
+            }
+            for (Integer i = behaviors.size() - 1; i >= 0; i--) {
+                ConditionalBehavior behavior = behaviors.get(i);
+                if (behavior.matches(actualArgs)) {
+                    return behavior.consumeAction();
+                }
+            }
+            return null;
+        }
+
+        private ConditionalAction consumeConditionalActionWithFallback(
+            String methodKey,
+            String methodName,
+            List<Object> actualArgs
+        ) {
+            ConditionalAction action = consumeConditionalAction(methodKey, actualArgs);
+            if (action != null || methodKey == methodName) {
+                return action;
+            }
+            return consumeConditionalAction(methodName, actualArgs);
         }
 
         /**
@@ -1451,6 +1579,22 @@ public class Mock {
             callsByKey.get(methodKey).add(call);
 
             try {
+                ConditionalAction conditionalAction = consumeConditionalActionWithFallback(
+                    methodKey,
+                    stubbedMethodName,
+                    listOfArgs
+                );
+                if (conditionalAction != null) {
+                    if (conditionalAction.error != null) {
+                        throw conditionalAction.error;
+                    }
+                    Object conditionalResult = conditionalAction.callback != null
+                        ? conditionalAction.callback.call(listOfArgs)
+                        : conditionalAction.returnValue;
+                    call.markReturned(conditionalResult);
+                    return conditionalResult;
+                }
+
                 // Check if we should throw an exception
                 if (exceptions.containsKey(methodKey)) {
                     throw exceptions.get(methodKey);
@@ -2095,12 +2239,53 @@ public class Mock {
     }
 
     private class MethodScope {
-        public final String methodName;
-        public final List<MethodCall> calls;
+        private final String methodName;
+        private final List<MethodCall> calls;
 
         private MethodScope(String methodName, List<MethodCall> calls) {
             this.methodName = methodName;
             this.calls = calls;
+        }
+    }
+
+    private class ConditionalAction {
+        private final Object returnValue;
+        private final Exception error;
+        private final Callback callback;
+
+        private ConditionalAction(Object returnValue, Exception error, Callback callback) {
+            this.returnValue = returnValue;
+            this.error = error;
+            this.callback = callback;
+        }
+    }
+
+    private class ConditionalBehavior {
+        private final List<Object> expectedArgs;
+        private final List<ConditionalAction> onceActions = new List<ConditionalAction>();
+        private ConditionalAction defaultAction;
+
+        private ConditionalBehavior(List<Object> expectedArgs) {
+            this.expectedArgs = expectedArgs == null ? null : new List<Object>(expectedArgs);
+        }
+
+        private Boolean matches(List<Object> actualArgs) {
+            return argsMatchValues(actualArgs, expectedArgs);
+        }
+
+        private ConditionalAction consumeAction() {
+            if (!onceActions.isEmpty()) {
+                return onceActions.remove(0);
+            }
+            return defaultAction;
+        }
+
+        private void addOnceAction(ConditionalAction action) {
+            onceActions.add(action);
+        }
+
+        private void setDefaultAction(ConditionalAction action) {
+            defaultAction = action;
         }
     }
 }
