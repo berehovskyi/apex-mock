@@ -80,18 +80,36 @@ Mock.spyOn(mockService, 'process').mockImplementation(new MyCallback());
 // Overload-specific stubbing (recommended when method names are overloaded)
 Mock.spyOn(mockService, 'doWork', new List<Type>{ String.class })
     .mockThrow(new IllegalArgumentException('String overload only'));
+
+// Argument-scoped stubbing with exact args
+Mock.spyOn(mockService, 'add')
+    .whenCalledWith(new List<Object>{ 1, 2 })
+    .mockReturnValue(3);
+
+// Argument-scoped stubbing with matchers
+Mock.spyOn(mockService, 'add')
+    .whenCalledWith(new List<Object>{ Mock.anyInteger(), 0 })
+    .mockThrow(new IllegalArgumentException('Second arg cannot be zero'));
+
+// One-time scoped implementation, then scoped fallback
+Mock.spyOn(mockService, 'add')
+    .whenCalledWith(new List<Object>{ 10, 20 })
+    .mockImplementationOnce(new SumCallback())
+    .mockReturnValue(31);
 ```
 
 When stubbing overloaded methods, prefer `spyOn(stub, methodName, parameterTypes)` so behavior is scoped to the intended signature.
 
 **Available Stubbing:**
 
-| Method                         | Description                                                                       |
-| :----------------------------- | :-------------------------------------------------------------------------------- |
-| `mockReturnValue(val)`         | Configures the method to always return the specified value.                       |
-| `mockReturnValueOnce(val)`     | Configures the method to return the value once (chained calls create a sequence). |
-| `mockThrow(exception)`         | Configures the method to throw the specified exception when called.               |
-| `mockImplementation(callback)` | Configures a dynamic implementation using the `Mock.Callback` interface.          |
+| Method                         | Description                                                                          |
+| :----------------------------- | :----------------------------------------------------------------------------------- |
+| `mockReturnValue(val)`         | Configures the method to always return the specified value.                          |
+| `mockReturnValueOnce(val)`     | Configures the method to return the value once (chained calls create a sequence).    |
+| `mockThrow(exception)`         | Configures the method to throw the specified exception when called.                  |
+| `mockImplementation(callback)` | Configures a dynamic implementation using the `Mock.Callback` interface.             |
+| `whenCalledWith(args)`         | Starts argument-scoped stubbing for a specific argument pattern (supports matchers). |
+| `mockImplementationOnce(cb)`   | On `whenCalledWith(...)`, configures a one-time callback for that argument scope.    |
 
 ### Verification
 
