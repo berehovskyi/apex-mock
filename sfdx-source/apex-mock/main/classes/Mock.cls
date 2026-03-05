@@ -489,6 +489,7 @@ public class Mock {
         private final Boolean isNegated;
         private final Object actualValue;
         private final Boolean isValueAssertion;
+        private final String boundMethodRequiredMessage = 'Method name must be provided when not using expect(spy).';
 
         private MockExpectation(MockProvider provider) {
             this(provider, null, null, false, false);
@@ -692,8 +693,8 @@ public class Mock {
          */
         public MockExpectation toHaveBeenCalled() {
             validateMockVerification();
-            ensureBoundMethod('Method name must be provided when not using expect(spy).');
-            return verifyCalled(boundMethodName, getBoundCalls());
+            MethodScope scope = getBoundScope();
+            return verifyCalled(scope.methodName, scope.calls);
         }
 
         /**
@@ -713,8 +714,8 @@ public class Mock {
          */
         public MockExpectation toHaveBeenCalledTimes(Integer times) {
             validateMockVerification();
-            ensureBoundMethod('Method name must be provided when not using expect(spy).');
-            return verifyCalledTimes(boundMethodName, getBoundCalls(), times);
+            MethodScope scope = getBoundScope();
+            return verifyCalledTimes(scope.methodName, scope.calls, times);
         }
 
         /**
@@ -737,8 +738,8 @@ public class Mock {
          */
         public MockExpectation toHaveBeenCalledWith(List<Object> expectedArgs) {
             validateMockVerification();
-            ensureBoundMethod('Method name must be provided when not using expect(spy).');
-            return verifyCalledWith(boundMethodName, getBoundCalls(), expectedArgs);
+            MethodScope scope = getBoundScope();
+            return verifyCalledWith(scope.methodName, scope.calls, expectedArgs);
         }
 
         /**
@@ -826,6 +827,121 @@ public class Mock {
             return this;
         }
 
+        /**
+         * Verifies the bound method returned successfully at least once.
+         * @return This expectation instance for chaining
+         */
+        public MockExpectation toHaveReturned() {
+            validateMockVerification();
+            MethodScope scope = getBoundScope();
+            return verifyReturned(scope.methodName, scope.calls);
+        }
+
+        /**
+         * Verifies the method returned successfully at least once.
+         * @param methodName Name of the method
+         * @return This expectation instance for chaining
+         */
+        public MockExpectation toHaveReturned(String methodName) {
+            validateMockVerification();
+            return verifyReturned(methodName, provider.getCalls(methodName));
+        }
+
+        /**
+         * Verifies the bound method returned successfully exactly n times.
+         * @param times Expected number of successful returns
+         * @return This expectation instance for chaining
+         */
+        public MockExpectation toHaveReturnedTimes(Integer times) {
+            validateMockVerification();
+            MethodScope scope = getBoundScope();
+            return verifyReturnedTimes(scope.methodName, scope.calls, times);
+        }
+
+        /**
+         * Verifies the method returned successfully exactly n times.
+         * @param methodName Name of the method
+         * @param times Expected number of successful returns
+         * @return This expectation instance for chaining
+         */
+        public MockExpectation toHaveReturnedTimes(String methodName, Integer times) {
+            validateMockVerification();
+            return verifyReturnedTimes(methodName, provider.getCalls(methodName), times);
+        }
+
+        /**
+         * Verifies the bound method returned with a matching value at least once.
+         * @param expectedValue Expected returned value
+         * @return This expectation instance for chaining
+         */
+        public MockExpectation toHaveReturnedWith(Object expectedValue) {
+            validateMockVerification();
+            MethodScope scope = getBoundScope();
+            return verifyReturnedWith(scope.methodName, scope.calls, expectedValue);
+        }
+
+        /**
+         * Verifies the method returned with a matching value at least once.
+         * @param methodName Name of the method
+         * @param expectedValue Expected returned value
+         * @return This expectation instance for chaining
+         */
+        public MockExpectation toHaveReturnedWith(String methodName, Object expectedValue) {
+            validateMockVerification();
+            return verifyReturnedWith(methodName, provider.getCalls(methodName), expectedValue);
+        }
+
+        /**
+         * Verifies the N-th call (1-based index) returned with a matching value.
+         * @param n Call index (1-based)
+         * @param expectedValue Expected returned value
+         * @return This expectation instance for chaining
+         */
+        public MockExpectation toHaveNthReturnedWith(Integer n, Object expectedValue) {
+            validateMockVerification();
+            MethodScope scope = getBoundScope();
+            return verifyNthReturnedWith(scope.methodName, scope.calls, n, expectedValue);
+        }
+
+        /**
+         * Verifies the N-th call (1-based index) to a method returned with a matching value.
+         * @param methodName Name of the method
+         * @param n Call index (1-based)
+         * @param expectedValue Expected returned value
+         * @return This expectation instance for chaining
+         */
+        public MockExpectation toHaveNthReturnedWith(String methodName, Integer n, Object expectedValue) {
+            validateMockVerification();
+            return verifyNthReturnedWith(methodName, provider.getCalls(methodName), n, expectedValue);
+        }
+
+        /**
+         * Verifies the most recent call returned with a matching value.
+         * @param expectedValue Expected returned value
+         * @return This expectation instance for chaining
+         */
+        public MockExpectation toHaveLastReturnedWith(Object expectedValue) {
+            validateMockVerification();
+            MethodScope scope = getBoundScope();
+            return verifyLastReturnedWith(scope.methodName, scope.calls, expectedValue);
+        }
+
+        /**
+         * Verifies the most recent call to a method returned with a matching value.
+         * @param methodName Name of the method
+         * @param expectedValue Expected returned value
+         * @return This expectation instance for chaining
+         */
+        public MockExpectation toHaveLastReturnedWith(String methodName, Object expectedValue) {
+            validateMockVerification();
+            return verifyLastReturnedWith(methodName, provider.getCalls(methodName), expectedValue);
+        }
+
+        private MethodScope getBoundScope() {
+            ensureBoundMethod(boundMethodRequiredMessage);
+            return new MethodScope(boundMethodName, getBoundCalls());
+        }
+
         private void ensureBoundMethod(String errorMessage) {
             failIf(boundMethodName == null, errorMessage);
         }
@@ -903,6 +1019,150 @@ public class Mock {
             return this;
         }
 
+        private MockExpectation verifyReturned(String methodName, List<MethodCall> calls) {
+            String prefix = getNamePrefix();
+            Integer returnedCount = countReturnedCalls(calls);
+            failIf(
+                !isNegated && returnedCount == 0,
+                prefix + 'Expected method "' + methodName + '" to have returned at least once, but it never returned.'
+            );
+            failIf(
+                isNegated && returnedCount > 0,
+                prefix +
+                    'Expected method "' +
+                    methodName +
+                    '" NOT to have returned, but it returned ' +
+                    returnedCount +
+                    ' times.'
+            );
+            return this;
+        }
+
+        private MockExpectation verifyReturnedTimes(String methodName, List<MethodCall> calls, Integer times) {
+            String prefix = getNamePrefix();
+            Integer returnedCount = countReturnedCalls(calls);
+            failIf(
+                !isNegated && returnedCount != times,
+                prefix +
+                    'Expected method "' +
+                    methodName +
+                    '" to have returned ' +
+                    times +
+                    ' times, but it returned ' +
+                    returnedCount +
+                    ' times.'
+            );
+            failIf(
+                isNegated && returnedCount == times,
+                prefix + 'Expected method "' + methodName + '" NOT to have returned ' + times + ' times, but it did.'
+            );
+            return this;
+        }
+
+        private MockExpectation verifyReturnedWith(String methodName, List<MethodCall> calls, Object expectedValue) {
+            String prefix = getNamePrefix();
+            Boolean matchFound = false;
+            for (MethodCall call : calls) {
+                if (didReturnWith(call, expectedValue)) {
+                    matchFound = true;
+                    break;
+                }
+            }
+
+            failIf(
+                !isNegated && !matchFound,
+                prefix +
+                    'Expected method "' +
+                    methodName +
+                    '" to have returned with ' +
+                    expectedValue +
+                    ', but no matching returned value was found.'
+            );
+            failIf(
+                isNegated && matchFound,
+                prefix +
+                    'Expected method "' +
+                    methodName +
+                    '" NOT to have returned with ' +
+                    expectedValue +
+                    ', but it did.'
+            );
+            return this;
+        }
+
+        private MockExpectation verifyNthReturnedWith(
+            String methodName,
+            List<MethodCall> calls,
+            Integer n,
+            Object expectedValue
+        ) {
+            String prefix = getNamePrefix();
+            failIf(n == null || n < 1, 'Call index must be greater than 0.');
+            failIf(
+                calls.size() < n,
+                'Expected at least ' + n + ' calls to "' + methodName + '", but only found ' + calls.size()
+            );
+
+            MethodCall nthCall = calls.get(n - 1);
+            if (!isNegated) {
+                failIf(
+                    !nthCall.didReturn,
+                    prefix +
+                        'Expected call #' +
+                        n +
+                        ' to "' +
+                        methodName +
+                        '" to have returned ' +
+                        expectedValue +
+                        ', but it threw.'
+                );
+                failIf(
+                    !valuesMatch(nthCall.returnValue, expectedValue),
+                    prefix +
+                        'Expected call #' +
+                        n +
+                        ' to "' +
+                        methodName +
+                        '" to have returned ' +
+                        expectedValue +
+                        ', but returned ' +
+                        nthCall.returnValue +
+                        '.'
+                );
+                return this;
+            }
+
+            failIf(
+                didReturnWith(nthCall, expectedValue),
+                prefix +
+                    'Expected call #' +
+                    n +
+                    ' to "' +
+                    methodName +
+                    '" NOT to have returned ' +
+                    expectedValue +
+                    ', but it did.'
+            );
+            return this;
+        }
+
+        private MockExpectation verifyLastReturnedWith(
+            String methodName,
+            List<MethodCall> calls,
+            Object expectedValue
+        ) {
+            String prefix = getNamePrefix();
+            failIf(
+                calls.isEmpty(),
+                prefix + 'Expected method "' + methodName + '" to have been called, but it was not.'
+            );
+            return verifyNthReturnedWith(methodName, calls, calls.size(), expectedValue);
+        }
+
+        private Boolean didReturnWith(MethodCall call, Object expectedValue) {
+            return call.didReturn && valuesMatch(call.returnValue, expectedValue);
+        }
+
         private void verifyMatchExpectation(
             Boolean matches,
             String positiveFailureMessage,
@@ -910,6 +1170,16 @@ public class Mock {
         ) {
             failIf(!isNegated && !matches, positiveFailureMessage);
             failIf(isNegated && matches, negatedFailureMessage);
+        }
+
+        private Integer countReturnedCalls(List<MethodCall> calls) {
+            Integer returnedCount = 0;
+            for (MethodCall call : calls) {
+                if (call.didReturn) {
+                    returnedCount++;
+                }
+            }
+            return returnedCount;
         }
 
         private String getNamePrefix() {
@@ -1013,6 +1283,10 @@ public class Mock {
         public String methodName { get; private set; }
         /** List of arguments. */
         public List<Object> args { get; private set; }
+        /** Whether the call returned successfully. */
+        public Boolean didReturn { get; private set; }
+        /** Return value for successful calls. */
+        public Object returnValue { get; private set; }
 
         /**
          * Constructor for MethodCall.
@@ -1022,6 +1296,25 @@ public class Mock {
         public MethodCall(String methodName, List<Object> args) {
             this.methodName = methodName;
             this.args = args;
+            this.didReturn = false;
+            this.returnValue = null;
+        }
+
+        /**
+         * Marks this call as successfully returned.
+         * @param returnValue Returned value
+         */
+        public void markReturned(Object returnValue) {
+            this.didReturn = true;
+            this.returnValue = returnValue;
+        }
+
+        /**
+         * Marks this call as thrown.
+         */
+        public void markThrew() {
+            this.didReturn = false;
+            this.returnValue = null;
         }
     }
 
@@ -1157,41 +1450,42 @@ public class Mock {
             }
             callsByKey.get(methodKey).add(call);
 
-            // Check if we should throw an exception
-            if (exceptions.containsKey(methodKey)) {
-                throw exceptions.get(methodKey);
-            }
-            if (exceptions.containsKey(stubbedMethodName)) {
-                throw exceptions.get(stubbedMethodName);
-            }
-
-            // Check for callbacks
-            if (callbacks.containsKey(methodKey)) {
-                return callbacks.get(methodKey).call(listOfArgs);
-            }
-            if (callbacks.containsKey(stubbedMethodName)) {
-                return callbacks.get(stubbedMethodName).call(listOfArgs);
-            }
-
-            // Check for one-time return values first
-            if (returnValuesOnce.containsKey(methodKey)) {
-                List<Object> onceValuesByKey = returnValuesOnce.get(methodKey);
-                if (!onceValuesByKey.isEmpty()) {
-                    return onceValuesByKey.remove(0);
+            try {
+                // Check if we should throw an exception
+                if (exceptions.containsKey(methodKey)) {
+                    throw exceptions.get(methodKey);
                 }
-            }
-            if (returnValuesOnce.containsKey(stubbedMethodName)) {
-                List<Object> onceValues = returnValuesOnce.get(stubbedMethodName);
-                if (!onceValues.isEmpty()) {
-                    return onceValues.remove(0);
+                if (exceptions.containsKey(stubbedMethodName)) {
+                    throw exceptions.get(stubbedMethodName);
                 }
-            }
 
-            // Fall back to persistent return value
-            if (returnValues.containsKey(methodKey)) {
-                return returnValues.get(methodKey);
+                Object result;
+                // Check for callbacks
+                if (callbacks.containsKey(methodKey)) {
+                    result = callbacks.get(methodKey).call(listOfArgs);
+                } else if (callbacks.containsKey(stubbedMethodName)) {
+                    result = callbacks.get(stubbedMethodName).call(listOfArgs);
+                } else if (returnValuesOnce.containsKey(methodKey) && !returnValuesOnce.get(methodKey).isEmpty()) {
+                    // Check for one-time return values first
+                    result = returnValuesOnce.get(methodKey).remove(0);
+                } else if (
+                    returnValuesOnce.containsKey(stubbedMethodName) &&
+                    !returnValuesOnce.get(stubbedMethodName).isEmpty()
+                ) {
+                    result = returnValuesOnce.get(stubbedMethodName).remove(0);
+                } else if (returnValues.containsKey(methodKey)) {
+                    // Fall back to persistent return value
+                    result = returnValues.get(methodKey);
+                } else {
+                    result = returnValues.get(stubbedMethodName);
+                }
+
+                call.markReturned(result);
+                return result;
+            } catch (Exception e) {
+                call.markThrew();
+                throw e;
             }
-            return returnValues.get(stubbedMethodName);
         }
     }
 
@@ -1798,5 +2092,15 @@ public class Mock {
      * Exception thrown by the Mock library for assertion failures.
      */
     public class MockException extends Exception {
+    }
+
+    private class MethodScope {
+        public final String methodName;
+        public final List<MethodCall> calls;
+
+        private MethodScope(String methodName, List<MethodCall> calls) {
+            this.methodName = methodName;
+            this.calls = calls;
+        }
     }
 }

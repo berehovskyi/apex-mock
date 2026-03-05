@@ -110,6 +110,11 @@ controller.execute(data);
 Mock.expect(spy).toHaveBeenCalled();
 Mock.expect(spy).toHaveBeenCalledTimes(1);
 Mock.expect(spy).toHaveBeenCalledWith(new List<Object>{ expectedValue });
+Mock.expect(spy).toHaveReturned();
+Mock.expect(spy).toHaveReturnedTimes(1);
+Mock.expect(spy).toHaveReturnedWith(expectedResult);
+Mock.expect(spy).toHaveNthReturnedWith(1, expectedResult);
+Mock.expect(spy).toHaveLastReturnedWith(expectedResult);
 
 // Verify an interaction did NOT happen
 Mock.expect(spy).notx.toHaveBeenCalled();
@@ -130,9 +135,15 @@ Mock.expect(objectSpy).toHaveBeenCalledTimes(1);
 | `toHaveBeenCalledWith(args)` | Asserts at least one call was made with the specified arguments.               |
 | `lastCalledWith(args)`       | Asserts the most recent call was made with the specified arguments.            |
 | `nthCalledWith(n, args)`     | Asserts the `n`-th call was made with the specified arguments (1-based index). |
+| `toHaveReturned()`           | Asserts the method returned successfully at least once.                        |
+| `toHaveReturnedTimes(n)`     | Asserts the method returned successfully exactly `n` times.                    |
+| `toHaveReturnedWith(val)`    | Asserts at least one successful call returned a matching value.                |
+| `toHaveNthReturnedWith(n,v)` | Asserts the `n`-th call returned a matching value (1-based index).             |
+| `toHaveLastReturnedWith(v)`  | Asserts the most recent call returned a matching value.                        |
 
 > [!NOTE]
 > All verifications support negation via the `.notx` property.
+> `toHaveReturned*` assertions count only successful returns (calls that throw are excluded).
 
 ### Value Assertions
 

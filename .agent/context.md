@@ -33,6 +33,7 @@ Configure mock behavior using `spyOn`. Support for sequential returns, exception
     ```
 
 - **Dynamic Implementation**:
+
     ```apex
     Mock.spyOn(mock, 'method').mockImplementation(new MyCallback());
     ```
@@ -74,17 +75,34 @@ Use `expect(spy).toHaveBeenCalled()` for no-arg verification. For mock-level ver
     ```
 
 - **Call History**:
+
     ```apex
     Mock.expect(spy).nthCalledWith(1, new List<Object>{ 'first' });
     Mock.expect(spy).lastCalledWith(new List<Object>{ 'last' });
     ```
+
+- **Return Outcome Assertions**:
+
+    ```apex
+    Mock.expect(spy).toHaveReturned();
+    Mock.expect(spy).toHaveReturnedTimes(2);
+    Mock.expect(spy).toHaveReturnedWith('ok');
+    Mock.expect(spy).toHaveNthReturnedWith(1, 'ok');
+    Mock.expect(spy).toHaveLastReturnedWith('ok');
+
+    // Mock-level style is also supported
+    Mock.expect(mock).toHaveReturned('method');
+    Mock.expect(mock).toHaveLastReturnedWith('method', 'ok');
+    ```
+
+`toHaveReturned*` assertions count only successful returns. Calls that throw are excluded from returned counts and return-value matching.
 
 ### 4. Argument Matchers
 
 Flexible argument matching for complex verification. All matchers support **recursive nesting**.
 
 - `Mock.any()`: Matches anything.
-  - Includes `null`.
+    - Includes `null`.
 - `Mock.anyString()`, `Mock.anyInteger()`, `Mock.anyId()`, `Mock.anyBoolean()`
 - `Mock.anyList()`, `Mock.anyMap()`, `Mock.anyDate()`, `Mock.anyDatetime()`
 - `Mock.anyTime()`, `Mock.anySObject()`
@@ -164,7 +182,8 @@ List<Id> oppIds = Mock.fakeIds(Opportunity.SObjectType, 3);
 
 - **Mock.cls**: The central facade containing all static methods and inner classes (`MethodSpy`, `MockExpectation`, `Matcher`).
 - **MockProvider**: Internal `System.StubProvider` that handles method interception. Uses a `Map` for **O(1)** call history lookups.
-  - Supports overload-safe lookup using method signature keys (`methodName(paramType1,paramType2,...)`) with method-name fallback for backward compatibility.
+    - Supports overload-safe lookup using method signature keys (`methodName(paramType1,paramType2,...)`) with method-name fallback for backward compatibility.
+    - Tracks per-call outcomes (`didReturn`, `returnValue`) so return assertions can distinguish successful returns from thrown calls.
 - **Interfaces**:
     - `Mock.Callback`: For dynamic `mockImplementation`.
     - `Mock.Matcher`: For custom argument matching logic.
