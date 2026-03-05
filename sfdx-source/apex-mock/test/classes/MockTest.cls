@@ -4,16 +4,20 @@ private class MockTest {
     // Basic Stubbing Tests
     @IsTest
     static void should_return_configured_value() {
-        // Uses top-level IMockTestService because Apex cannot stub inner types
         // Arrange
         IMockTestService mockService = (IMockTestService) Mock.of(IMockTestService.class);
         Mock.spyOn(mockService, 'getValue').mockReturnValue('Success');
         Mock.spyOn(mockService, 'add').mockReturnValue(10);
 
+        // Act
+        Object result = mockService.getValue();
+        Integer firstAddResult = mockService.add(1, 2);
+        Integer secondAddResult = mockService.add(5, 5);
+
         // Assert
-        Assert.areEqual('Success', mockService.getValue(), 'Should return configured value');
-        Assert.areEqual(10, mockService.add(1, 2), 'Should return configured value ignoring args');
-        Assert.areEqual(10, mockService.add(5, 5), 'Should return configured value regardless of args');
+        Assert.areEqual('Success', result, 'Should return configured value');
+        Assert.areEqual(10, firstAddResult, 'Should return configured value ignoring args');
+        Assert.areEqual(10, secondAddResult, 'Should return configured value regardless of args');
     }
 
     @IsTest
@@ -49,11 +53,17 @@ private class MockTest {
             .mockReturnValueOnce('Second')
             .mockReturnValue('Default');
 
+        // Act
+        Object actual1 = mockService.getValue();
+        Object actual2 = mockService.getValue();
+        Object actual3 = mockService.getValue();
+        Object actual4 = mockService.getValue();
+
         // Assert
-        Assert.areEqual('First', mockService.getValue(), 'First call should return first value');
-        Assert.areEqual('Second', mockService.getValue(), 'Second call should return second value');
-        Assert.areEqual('Default', mockService.getValue(), 'Third call should return default value');
-        Assert.areEqual('Default', mockService.getValue(), 'Fourth call should still return default');
+        Assert.areEqual('First', actual1, 'First call should return first value');
+        Assert.areEqual('Second', actual2, 'Second call should return second value');
+        Assert.areEqual('Default', actual3, 'Third call should return default value');
+        Assert.areEqual('Default', actual4, 'Fourth call should still return default');
     }
 
     @IsTest
@@ -62,9 +72,13 @@ private class MockTest {
         IMockTestService mockService = (IMockTestService) Mock.of(IMockTestService.class);
         Mock.spyOn(mockService, 'getValue').mockReturnValueOnce('Only');
 
-        // Act & Assert
-        Assert.areEqual('Only', mockService.getValue(), 'First call should return the once value');
-        Assert.areEqual(null, mockService.getValue(), 'Second call should return null');
+        // Act
+        Object actual1 = mockService.getValue();
+        Object actual2 = mockService.getValue();
+
+        // Assert
+        Assert.areEqual('Only', actual1, 'First call should return the once value');
+        Assert.areEqual(null, actual2, 'Second call should return null');
     }
 
     @IsTest
@@ -75,9 +89,13 @@ private class MockTest {
         addSpy.mockReturnValue(999);
         addSpy.whenCalledWith(new List<Object>{ 1, 2 }).mockReturnValue(3);
 
-        // Act & Assert
-        Assert.areEqual(3, mockService.add(1, 2), 'Expected argument-scoped stubbing to win over default stub.');
-        Assert.areEqual(999, mockService.add(5, 5), 'Expected default method stub for non-matching arguments.');
+        // Act
+        Object actual1 = mockService.add(1, 2);
+        Object actual2 = mockService.add(5, 5);
+
+        // Assert
+        Assert.areEqual(3, actual1, 'Expected argument-scoped stubbing to win over default stub.');
+        Assert.areEqual(999, actual2, 'Expected default method stub for non-matching arguments.');
     }
 
     @IsTest
@@ -109,10 +127,15 @@ private class MockTest {
             .mockImplementationOnce(new AddWithOffset(5))
             .mockReturnValue(31);
 
-        // Act & Assert
-        Assert.areEqual(35, mockService.add(10, 20), 'Expected one-time implementation to run first.');
-        Assert.areEqual(31, mockService.add(10, 20), 'Expected scoped default value after once callback is consumed.');
-        Assert.areEqual(31, mockService.add(10, 20), 'Expected scoped default to remain active.');
+        // Act
+        Object actual1 = mockService.add(10, 20);
+        Object actual2 = mockService.add(10, 20);
+        Object actual3 = mockService.add(10, 20);
+
+        // Assert
+        Assert.areEqual(35, actual1, 'Expected one-time implementation to run first.');
+        Assert.areEqual(31, actual2, 'Expected scoped default value after once callback is consumed.');
+        Assert.areEqual(31, actual3, 'Expected scoped default to remain active.');
     }
 
     @IsTest
@@ -123,7 +146,7 @@ private class MockTest {
             .whenCalledWith(new List<Object>{ 'boom' })
             .mockThrow(new IllegalArgumentException('String overload scoped throw'));
 
-        // Act
+        // Act & Assert
         Boolean stringOverloadThrew = false;
         try {
             mockService.doWork('boom');
@@ -138,7 +161,6 @@ private class MockTest {
             objectOverloadThrew = true;
         }
 
-        // Assert
         Assert.isTrue(stringOverloadThrew, 'Expected argument-scoped behavior on String overload.');
         Assert.isFalse(objectOverloadThrew, 'Expected Object overload not to use String-overload scoped behavior.');
     }
@@ -151,10 +173,15 @@ private class MockTest {
         addSpy.mockReturnValue(999);
         addSpy.whenCalledWith(new List<Object>{ 2, 2 }).mockReturnValueOnce(4).mockReturnValue(22);
 
-        // Act & Assert
-        Assert.areEqual(4, mockService.add(2, 2), 'Expected scoped once value on first matching call.');
-        Assert.areEqual(22, mockService.add(2, 2), 'Expected scoped default value after once value is consumed.');
-        Assert.areEqual(999, mockService.add(5, 5), 'Expected method-level fallback for non-matching arguments.');
+        // Act
+        Object actual1 = mockService.add(2, 2);
+        Object actual2 = mockService.add(2, 2);
+        Object actual3 = mockService.add(5, 5);
+
+        // Assert
+        Assert.areEqual(4, actual1, 'Expected scoped once value on first matching call.');
+        Assert.areEqual(22, actual2, 'Expected scoped default value after once value is consumed.');
+        Assert.areEqual(999, actual3, 'Expected method-level fallback for non-matching arguments.');
     }
 
     @IsTest
@@ -186,9 +213,13 @@ private class MockTest {
             .whenCalledWith(new List<Object>{ 4, 4 })
             .mockImplementation(new AddWithOffset(1));
 
-        // Act & Assert
-        Assert.areEqual(9, mockService.add(4, 4), 'Expected scoped callback result on first match.');
-        Assert.areEqual(9, mockService.add(4, 4), 'Expected scoped callback to stay active.');
+        // Act
+        Object actual1 = mockService.add(4, 4);
+        Object actual2 = mockService.add(4, 4);
+
+        // Assert
+        Assert.areEqual(9, actual1, 'Expected scoped callback result on first match.');
+        Assert.areEqual(9, actual2, 'Expected scoped callback to stay active.');
     }
 
     @IsTest
@@ -316,7 +347,7 @@ private class MockTest {
         // Act
         mockService.add(42, 99);
 
-        // Assert - Mock.any() should match any value
+        // Assert
         Mock.expect(mockService).toHaveBeenCalledWith('add', new List<Object>{ Mock.any(), Mock.any() });
     }
 
@@ -340,8 +371,11 @@ private class MockTest {
         Mock.Matcher matcher = Mock.objectContaining(new Map<String, Object>{ 'key1' => 'value1' });
         Map<String, Object> actual = new Map<String, Object>{ 'key1' => 'value1', 'key2' => 'value2' };
 
-        // Act & Assert
-        Assert.isTrue(matcher.matches(actual), 'Should match map containing the key');
+        // Act
+        Boolean matches = matcher.matches(actual);
+
+        // Assert
+        Assert.isTrue(matches, 'Should match map containing the key');
     }
 
     @IsTest
@@ -350,8 +384,11 @@ private class MockTest {
         Mock.Matcher matcher = Mock.objectContaining(new Map<String, Object>{ 'MissingField' => 'value' });
         Account acc = new Account(Name = 'Test');
 
-        // Act & Assert
-        Assert.isFalse(matcher.matches(acc), 'Should not match when field is missing or different');
+        // Act
+        Boolean matches = matcher.matches(acc);
+
+        // Assert
+        Assert.isFalse(matches, 'Should not match when field is missing or different');
     }
 
     // Chaining Tests
@@ -364,7 +401,7 @@ private class MockTest {
         mockService.getValue();
         mockService.add(1, 2);
 
-        // Assert - chained verification
+        // Assert
         Mock.expect(mockService)
             .toHaveBeenCalled('getValue')
             .toHaveBeenCalled('add')
@@ -382,7 +419,7 @@ private class MockTest {
         // Act
         mockService.getValue();
 
-        // Assert - verify using the spy directly
+        // Assert
         Mock.expect(spy).toHaveBeenCalled();
     }
 
@@ -422,7 +459,7 @@ private class MockTest {
         // Act
         mockService.getValue();
 
-        // Assert - both styles should work
+        // Assert
         Mock.expect(spy).toHaveBeenCalled(); // New style
         Mock.expect(mockService).toHaveBeenCalled('getValue'); // Old style
     }
@@ -449,16 +486,13 @@ private class MockTest {
         IMockTestService mockService = (IMockTestService) Mock.of(IMockTestService.class);
         Mock.MethodSpy spy = Mock.spyOn(mockService, 'getValue');
 
-        // Assert - not called yet
+        // Act & Assert
         Mock.expect(spy).notx.toHaveBeenCalled();
 
-        // Act
         mockService.getValue();
 
-        // Assert
         Mock.expect(spy).notx.toHaveBeenCalledTimes(2);
 
-        // Negative test
         try {
             Mock.expect(spy).notx.toHaveBeenCalled();
             Assert.fail('Should fail negation check');
@@ -490,7 +524,6 @@ private class MockTest {
         Mock.expect(spy).nthCalledWith(2, new List<Object>{ 2, 2 });
         Mock.expect(spy).lastCalledWith(new List<Object>{ 3, 3 });
 
-        // Act & Assert error cases
         try {
             Mock.expect(spy).nthCalledWith(4, new List<Object>{ 4, 4 });
             Assert.fail('Should fail for out of bounds');
@@ -511,10 +544,12 @@ private class MockTest {
         // Arrange
         IMockTestService mockService = (IMockTestService) Mock.of(IMockTestService.class);
         Mock.MethodSpy spy = Mock.spyOn(mockService, 'add');
+
+        // Act
         mockService.add(1, 1);
         mockService.add(2, 2);
 
-        // Act
+        // Assert
         Boolean lastCalledWithThrew = false;
         try {
             Mock.expect(spy).notx.lastCalledWith(new List<Object>{ 2, 2 });
@@ -529,7 +564,6 @@ private class MockTest {
             nthCalledWithThrew = true;
         }
 
-        // Assert
         Assert.isTrue(
             lastCalledWithThrew,
             'Expected .notx.lastCalledWith to throw when last call matches, but it did not (bug).'
@@ -548,14 +582,14 @@ private class MockTest {
 
         // Act
         mockService.getValue();
+
+        // Assert
         Mock.expect(spy).toHaveBeenCalledTimes(1);
 
-        // Act & Assert Clear
         Mock.clear(mockService);
         Mock.expect(spy).notx.toHaveBeenCalled(); // History cleared
         Assert.areEqual('A', mockService.getValue()); // Config preserved
 
-        // Act & Assert Reset
         Mock.reset(mockService);
         Mock.expect(spy).notx.toHaveBeenCalled(); // History cleared
         Assert.areEqual(null, mockService.getValue()); // Config cleared
@@ -578,7 +612,6 @@ private class MockTest {
     @IsTest
     static void should_assert_values_tobe_toequal() {
         // Act & Assert
-        // Primitives are NOT reference equal in Apex when boxed as Object
         Mock.expect(1).notx.toBe(1);
         Mock.expect('a').toBe('a');
         Mock.expect(true).notx.toBe(true);
@@ -593,7 +626,6 @@ private class MockTest {
             Assert.isTrue(e.getMessage().contains('Expected reference equality: 2, but was: 1'));
         }
 
-        // toEqual performs value equality
         Mock.expect(1).toEqual(1);
         Mock.expect('a').toEqual('a');
         Mock.expect(true).toEqual(true);
@@ -679,14 +711,12 @@ private class MockTest {
         Mock.expect(mock1).toHaveBeenCalled('getValue');
         Mock.expect(mock2).toHaveBeenCalled('getValue');
 
-        // Act & Assert - Clear All
         Mock.clearAll();
         Mock.expect(mock1).notx.toHaveBeenCalled('getValue');
         Mock.expect(mock2).notx.toHaveBeenCalled('getValue');
         Assert.areEqual('MOCK1', mock1.getValue());
         Assert.areEqual('MOCK2', mock2.getValue());
 
-        // Act & Assert - Reset All
         Mock.resetAll();
         Mock.expect(mock1).notx.toHaveBeenCalled('getValue');
         Mock.expect(mock2).notx.toHaveBeenCalled('getValue');
@@ -864,7 +894,6 @@ private class MockTest {
             Assert.isTrue(e.getMessage().contains('matching arguments, but no matching call was found'));
         }
 
-        // Matchers direct check
         Assert.isTrue(((Mock.Matcher) Mock.anyId()).matches(UserInfo.getUserId()));
         Assert.isTrue(((Mock.Matcher) Mock.anyDecimal()).matches(10.5));
         Assert.isTrue(((Mock.Matcher) Mock.anyBoolean()).matches(true));
@@ -875,6 +904,7 @@ private class MockTest {
         Assert.isTrue(((Mock.Matcher) Mock.anyDatetime()).matches(Datetime.now()));
         Assert.isTrue(((Mock.Matcher) Mock.anySObject()).matches(new Account()));
         Assert.isTrue(((Mock.Matcher) Mock.anyTime()).matches(Time.newInstance(1, 0, 0, 0)));
+        Assert.isTrue(((Mock.Matcher) Mock.any(Time.class)).matches(Time.newInstance(1, 0, 0, 0)));
     }
 
     @IsTest
@@ -911,11 +941,12 @@ private class MockTest {
         // Arrange
         IMockTestService mockService = (IMockTestService) Mock.of(IMockTestService.class);
 
-        // Act & Assert - Nested in arguments
+        // Act
         mockService.doWork('Test');
+
+        // Assert
         Mock.expect(mockService).toHaveBeenCalledWith('doWork', new List<Object>{ Mock.stringContaining('es') });
 
-        // Act & Assert - Nested in objectContaining
         mockService.updateDTO(new TestDTO('MyName', 10));
         Mock.expect(mockService)
             .toHaveBeenCalledWith(
@@ -965,7 +996,7 @@ private class MockTest {
         Mock.MethodSpy spy = Mock.spyOn(mockService, 'add');
         spy.mockImplementation(new ReturnOrThrowByFirstArg());
 
-        // Act
+        // Act & Assert
         Assert.areEqual(3, mockService.add(1, 2), 'First call should return from callback');
         try {
             mockService.add(-1, 5);
@@ -975,7 +1006,6 @@ private class MockTest {
         }
         Assert.areEqual(9, mockService.add(4, 5), 'Third call should return from callback');
 
-        // Assert - spy-based API
         Mock.expect(spy).toHaveReturned();
         Mock.expect(spy).toHaveReturnedTimes(2);
         Mock.expect(spy).toHaveReturnedWith(3);
@@ -983,7 +1013,6 @@ private class MockTest {
         Mock.expect(spy).toHaveNthReturnedWith(3, 9);
         Mock.expect(spy).notx.toHaveReturnedWith(100);
 
-        // Assert - mock+methodName API
         Mock.expect(mockService).toHaveReturned('add');
         Mock.expect(mockService).toHaveReturnedTimes('add', 2);
         Mock.expect(mockService).toHaveReturnedWith('add', 9);
@@ -999,6 +1028,8 @@ private class MockTest {
 
         // Act
         mockService.add(1, 2);
+
+        // Assert
         try {
             mockService.add(-1, 0);
             Assert.fail('Expected callback to throw on sentinel input');
@@ -1006,7 +1037,6 @@ private class MockTest {
             Assert.isTrue(e.getMessage().contains('Sentinel throw'));
         }
 
-        // Assert
         try {
             Mock.expect(spy).toHaveNthReturnedWith(2, 0);
             Assert.fail('Should fail because the second call threw');
@@ -1058,6 +1088,8 @@ private class MockTest {
 
         // Act
         mockService.add(1, 2);
+
+        // Assert
         try {
             mockService.add(-1, 0);
             Assert.fail('Expected callback to throw on sentinel input');
@@ -1065,7 +1097,6 @@ private class MockTest {
             Assert.isTrue(e.getMessage().contains('Sentinel throw'));
         }
 
-        // Assert
         try {
             Mock.expect(spy).toHaveLastReturnedWith(0);
             Assert.fail('Should fail because the last call threw');
@@ -1125,15 +1156,17 @@ private class MockTest {
         http.mockResponse('POST', 'https://api.com/users', '{"status": "created"}', 201);
         http.mockResponse('https://api.com/fallback', 'generic', 200);
 
-        // Act & Assert GET
         HttpRequest getReq = new HttpRequest();
         getReq.setEndpoint('https://api.com/users');
         getReq.setMethod('GET');
+
+        // Act
         HttpResponse getRes = new Http().send(getReq);
+
+        // Assert
         Assert.areEqual(200, getRes.getStatusCode());
         Assert.areEqual('{"users": []}', getRes.getBody());
 
-        // Act & Assert POST
         HttpRequest postReq = new HttpRequest();
         postReq.setEndpoint('https://api.com/users');
         postReq.setMethod('POST');
@@ -1141,7 +1174,6 @@ private class MockTest {
         Assert.areEqual(201, postRes.getStatusCode());
         Assert.areEqual('{"status": "created"}', postRes.getBody());
 
-        // Act & Assert Fallback
         HttpRequest fallbackReq = new HttpRequest();
         fallbackReq.setEndpoint('https://api.com/fallback');
         fallbackReq.setMethod('PUT');
@@ -1180,11 +1212,10 @@ private class MockTest {
         Map<String, Object> data = new Map<String, Object>{ 'Name' => 'Test', 'Value' => 100 };
         List<Object> listData = new List<Object>{ data, 'simple' };
 
-        // Assert - toMatch(Matcher)
+        // Act & Assert
         Mock.expect(data).toMatch(Mock.objectContaining(new Map<String, Object>{ 'Name' => 'Test' }));
         Mock.expect(data).notx.toMatch(Mock.objectContaining(new Map<String, Object>{ 'Name' => 'Other' }));
 
-        // Assert - toContain(Matcher)
         Mock.expect(listData).toContain(Mock.objectContaining(new Map<String, Object>{ 'Value' => 100 }));
         Mock.expect(listData).notx.toContain(Mock.stringContaining('missing'));
     }
@@ -1195,7 +1226,7 @@ private class MockTest {
         Account data = new Account(Name = 'Test', NumberOfEmployees = 100);
         List<Object> listData = new List<Object>{ data, 'simple' };
 
-        // Assert - toMatch(Matcher)
+        // Act & Assert
         Mock.expect(data)
             .toMatch(
                 Mock.sObjectContaining(
@@ -1207,7 +1238,6 @@ private class MockTest {
             .notx.toMatch(Mock.sObjectContaining(new Map<SObjectField, Object>{ Account.Name => 'Other' }));
         Mock.expect(data).notx.toMatch(Mock.sObjectContaining(new Account(Name = 'Other')));
 
-        // Assert - toContain(Matcher)
         Mock.expect(listData)
             .toContain(Mock.sObjectContaining(new Map<SObjectField, Object>{ Account.NumberOfEmployees => 100 }));
         Mock.expect(listData).notx.toContain(Mock.stringContaining('missing'));
@@ -1215,12 +1245,12 @@ private class MockTest {
 
     @IsTest
     static void should_generate_fake_ids() {
-        // Act
+        // Arrange
         Id accountId1 = Mock.fakeId(Account.SObjectType);
         Id accountId2 = Mock.fakeId(Account.SObjectType);
         Id contactId = Mock.fakeId(Contact.SObjectType);
 
-        // Assert
+        // Act & Assert
         Assert.areNotEqual(null, accountId1);
         Assert.areNotEqual(null, accountId2);
         Assert.areNotEqual(accountId1, accountId2, 'IDs should be unique');
@@ -1231,10 +1261,10 @@ private class MockTest {
 
     @IsTest
     static void should_generate_multiple_fake_ids() {
-        // Act
+        // Arrange
         List<Id> accountIds = Mock.fakeIds(Account.SObjectType, 3);
 
-        // Assert
+        // Act & Assert
         Assert.areEqual(3, accountIds.size());
         Assert.areNotEqual(accountIds[0], accountIds[1]);
         Assert.areNotEqual(accountIds[1], accountIds[2]);
@@ -1250,11 +1280,10 @@ private class MockTest {
         Account acc2 = new Account(Name = 'Test');
         Account accRef = acc1;
 
-        // Assert - toEqual (Value Equality)
+        // Act & Assert
         Mock.expect(acc1).toEqual(acc2);
         Mock.expect(acc1).notx.toEqual(new Account(Name = 'Other'));
 
-        // Assert - toBe (Reference Equality)
         Mock.expect(acc1).toBe(accRef);
         Mock.expect(acc1).notx.toBe(acc2); // Same values, different references
     }
@@ -1265,15 +1294,13 @@ private class MockTest {
         Account acc = new Account(Name = 'Test');
         TestDTO dto = new TestDTO('Test', 100);
 
-        // Assert - any(Type)
+        // Act & Assert
         Mock.expect(dto).toMatch(Mock.any(TestDTO.class));
         Mock.expect(dto).notx.toMatch(Mock.any(Account.class));
 
-        // Assert - anySObject(type)
         Mock.expect(acc).toMatch(Mock.anySObject(Account.SObjectType));
         Mock.expect(acc).notx.toMatch(Mock.anySObject(Contact.SObjectType));
 
-        // Assert - notx(Matcher)
         Mock.expect('Success').toMatch(Mock.notx(Mock.stringContaining('Failure')));
         Mock.expect(100).toMatch(Mock.notx(Mock.anyString()));
     }
@@ -1284,12 +1311,13 @@ private class MockTest {
         Mock.HttpMock http = Mock.mockHttp();
         http.mockResponse('POST', 'https://api.com/v1', '{"status":"ok"}', 200);
 
-        // Act
         HttpRequest req = new HttpRequest();
         req.setEndpoint('https://api.com/v1');
         req.setMethod('POST');
         req.setBody('{"name":"test"}');
         req.setHeader('Content-Type', 'application/json');
+
+        // Act
         new Http().send(req);
 
         // Assert
@@ -1301,7 +1329,6 @@ private class MockTest {
                 new Map<String, Object>{ 'Content-Type' => 'application/json' }
             );
 
-        // Negation
         Mock.expect(http)
             .notx.toHaveBeenCalledWith(
                 'https://api.com/v1',
@@ -1400,7 +1427,6 @@ private class MockTest {
 
         // Assert
         Mock.expect(http).notx.toHaveBeenCalled();
-        // Since clear() only clears call history (not responses), sending again should still work
         HttpRequest req = new HttpRequest();
         req.setEndpoint('https://api.com');
         req.setMethod('GET');
@@ -1421,8 +1447,6 @@ private class MockTest {
 
         // Assert
         Mock.expect(http).notx.toHaveBeenCalled();
-        // Since reset clears responses too, sending again should return null (default Stub behavior if not found)
-        // Actually HttpMock.respond returns null if no response matched.
         HttpRequest req = new HttpRequest();
         req.setEndpoint('https://api.com');
         HttpResponse res = new Http().send(req);
@@ -1445,6 +1469,105 @@ private class MockTest {
         // Assert
         Mock.expect(http).toHaveBeenCalledWith('https://api.com/v1', 'POST', 'data');
         Mock.expect(http).notx.toHaveBeenCalledWith('https://api.com/v1', 'POST', 'wrong');
+    }
+
+    @IsTest
+    static void should_cover_signature_keyed_provider_paths() {
+        // Arrange
+        IMockTestService callbackMock = (IMockTestService) Mock.of(IMockTestService.class);
+        Mock.spyOn(callbackMock, 'add', new List<Type>{ Integer.class, Integer.class })
+            .mockImplementation(new AddWithOffset(1));
+        // Act & Assert
+        Assert.areEqual(6, callbackMock.add(2, 3), 'Expected method-key callback branch to execute.');
+
+        IMockTestService onceMock = (IMockTestService) Mock.of(IMockTestService.class);
+        Mock.spyOn(onceMock, 'add', new List<Type>{ Integer.class, Integer.class }).mockReturnValueOnce(42);
+        Assert.areEqual(42, onceMock.add(8, 9), 'Expected method-key one-time return branch to execute.');
+
+        IMockTestService valueMock = (IMockTestService) Mock.of(IMockTestService.class);
+        Mock.MethodSpy addSigSpy = Mock.spyOn(valueMock, 'add', new List<Type>{ Integer.class, Integer.class });
+        addSigSpy.mockReturnValue(99);
+        Assert.areEqual(99, valueMock.add(1, 1), 'Expected method-key persistent return branch to execute.');
+        List<List<Object>> signatureCalls = addSigSpy.calls;
+        Assert.areEqual(1, signatureCalls.size(), 'Expected signature spy to read call history by method key.');
+        Assert.areEqual(2, signatureCalls[0].size(), 'Expected captured argument list for signature spy.');
+    }
+
+    @IsTest
+    static void should_cover_edge_branches_in_expectations_and_matchers() {
+        // Act & Assert
+        try {
+            Mock.expect(123).toContain('x');
+            Assert.fail('Expected toContain() to reject non-iterable, non-string actual values.');
+        } catch (Mock.MockException e) {
+            Assert.isTrue(e.getMessage().contains('Iterable or String'));
+        }
+
+        Mock.ExceptionExpectation expectation = Mock.expect(new TestBlock(true));
+        expectation.toThrow();
+        expectation.toThrow();
+
+        Assert.isFalse(Mock.anySObject().matches('not-an-sobject'));
+        Assert.isFalse(Mock.any(String.class).matches(null));
+        Assert.isFalse(Mock.iterableContaining('x').matches(10));
+
+        Mock.Matcher containsField = Mock.objectContaining(new Map<String, Object>{ 'Name' => 'Acme' });
+        Assert.isFalse(containsField.matches(null), 'Null should fail objectContaining match.');
+        Assert.isFalse(containsField.matches('plain-text'), 'Non-map/DTO fallback cast failure should return false.');
+    }
+
+    @IsTest
+    static void should_cover_http_header_mismatch_path() {
+        // Arrange
+        Mock.HttpMock http = Mock.mockHttp();
+        http.mockResponse('POST', 'https://api.com/h', 'ok', 200);
+
+        HttpRequest req = new HttpRequest();
+        req.setEndpoint('https://api.com/h');
+        req.setMethod('POST');
+        req.setBody('payload');
+        req.setHeader('X-Token', 'actual');
+
+        // Act
+        new Http().send(req);
+
+        try {
+            // Assert
+            Mock.expect(http)
+                .toHaveBeenCalledWith(
+                    'https://api.com/h',
+                    'POST',
+                    'payload',
+                    new Map<String, Object>{ 'X-Token' => 'expected' }
+                );
+            Assert.fail('Expected header mismatch to fail verification.');
+        } catch (Mock.MockException e) {
+            Assert.isTrue(e.getMessage().contains('no matching call was found'));
+        }
+    }
+
+    @IsTest
+    static void should_cover_provider_method_key_when_param_types_are_null() {
+        // Arrange
+        Mock.MockProvider provider = new Mock.MockProvider('DirectProvider');
+
+        // Act
+        Object result = provider.handleMethodCall(
+            new Account(),
+            'dynamicCall',
+            String.class,
+            null,
+            new List<String>(),
+            new List<Object>{ 'arg' }
+        );
+
+        // Assert
+        Assert.areEqual(null, result, 'Expected default null return for unconfigured direct provider call.');
+        Assert.areEqual(
+            1,
+            provider.getCalls('dynamicCall').size(),
+            'Expected call to be recorded under method name key.'
+        );
     }
 
     public class MultiplyByTwo implements Mock.Callback {

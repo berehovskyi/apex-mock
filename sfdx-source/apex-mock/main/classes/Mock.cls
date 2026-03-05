@@ -428,13 +428,12 @@ public class Mock {
     }
 
     private static String getTypeName(Object o) {
-        System.JSON result;
+        Time probe;
         try {
-            // Force a type exception to extract the runtime type name
-            result = (System.JSON) o;
-            return 'System.JSON';
+            probe = (Time) o;
+            return 'Time';
         } catch (TypeException e) {
-            return e.getMessage().substringBetween('Invalid conversion from runtime type ', ' to System.JSON');
+            return e.getMessage().substringBetween('Invalid conversion from runtime type ', ' to Time');
         }
     }
 
