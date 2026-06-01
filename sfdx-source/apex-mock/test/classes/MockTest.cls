@@ -656,6 +656,27 @@ private class MockTest {
     }
 
     @IsTest
+    static void should_support_matchers_in_string_to_contain() {
+        // Act & Assert
+        Mock.expect('Hello World').toContain(Mock.stringContaining('World'));
+        Mock.expect('Hello World').notx.toContain(Mock.stringContaining('xyz'));
+
+        try {
+            Mock.expect('Hello World').toContain(Mock.stringContaining('xyz'));
+            Assert.fail('Should fail when matcher does not match the string');
+        } catch (Mock.MockException e) {
+            Assert.isTrue(e.getMessage().contains('to contain'));
+        }
+
+        try {
+            Mock.expect('Hello World').toContain(5);
+            Assert.fail('Should reject a non-String, non-Matcher item for a String actual');
+        } catch (Mock.MockException e) {
+            Assert.isTrue(e.getMessage().contains('String or Matcher item'));
+        }
+    }
+
+    @IsTest
     static void should_assert_iterable_contains() {
         // Arrange
         List<String> listStr = new List<String>{ 'a', 'b', 'c' };
