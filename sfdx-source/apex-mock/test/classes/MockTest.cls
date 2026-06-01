@@ -1493,6 +1493,36 @@ private class MockTest {
     }
 
     @IsTest
+    static void should_verify_default_get_method_when_request_method_is_not_set() {
+        // Arrange
+        Mock.HttpMock http = Mock.mockHttp();
+        HttpRequest req = new HttpRequest();
+        req.setEndpoint('https://api.example.com/users');
+        // intentionally no setMethod(...)
+
+        // Act
+        http.respond(req);
+
+        // Assert
+        Mock.expect(http).toHaveBeenCalledWith('https://api.example.com/users', 'GET');
+    }
+
+    @IsTest
+    static void should_verify_http_method_case_insensitively() {
+        // Arrange
+        Mock.HttpMock http = Mock.mockHttp();
+        HttpRequest req = new HttpRequest();
+        req.setEndpoint('https://api.example.com/users');
+        req.setMethod('post');
+
+        // Act
+        http.respond(req);
+
+        // Assert
+        Mock.expect(http).toHaveBeenCalledWith('https://api.example.com/users', 'POST');
+    }
+
+    @IsTest
     static void should_cover_signature_keyed_provider_paths() {
         // Arrange
         IMockTestService callbackMock = (IMockTestService) Mock.of(IMockTestService.class);

@@ -2494,7 +2494,9 @@ public class Mock {
             if (!valuesMatch(req.getEndpoint(), url)) {
                 return false;
             }
-            if (!valuesMatch(req.getMethod(), method)) {
+            String actualMethod = (req.getMethod() ?? 'GET').toUpperCase();
+            Object expectedMethod = method instanceof String ? ((String) method).toUpperCase() : method;
+            if (!valuesMatch(actualMethod, expectedMethod)) {
                 return false;
             }
             if (body != null && !valuesMatch(req.getBody(), body)) {
