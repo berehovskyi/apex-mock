@@ -31,7 +31,7 @@ A robust, Jest-inspired mocking library for Salesforce Apex unit tests. `apex-mo
 or install as an Unlocked Package using the CLI:
 
 ```sh pkg::apex-mock
-sf package install -p 04tJ5000000D9w2IAC -o <org-alias> -r -w 10
+sf package install -p 04tJ5000000DA2jIAG -o <org-alias> -r -w 10
 ```
 
 ## Features
