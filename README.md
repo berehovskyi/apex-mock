@@ -100,6 +100,9 @@ Mock.spyOn(mockService, 'add')
 
 When stubbing overloaded methods, prefer `spyOn(stub, methodName, parameterTypes)` so behavior is scoped to the intended signature.
 
+> [!NOTE]
+> **Stub precedence:** argument-scoped stubs (`whenCalledWith(...)`) take precedence over method-level stubs. Among method-level stubs, precedence is `mockThrow(...)` → `mockImplementation(...)` → `mockReturnValueOnce(...)` → `mockReturnValue(...)`.
+
 **Available Stubbing:**
 
 | Method                         | Description                                                                          |

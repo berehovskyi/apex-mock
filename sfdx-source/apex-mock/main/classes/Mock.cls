@@ -778,8 +778,14 @@ public class Mock {
             validateAssertion();
             Boolean contains = false;
 
-            if (actualValue instanceof String && item instanceof String) {
-                contains = ((String) actualValue).contains((String) item);
+            if (actualValue instanceof String) {
+                if (item instanceof String) {
+                    contains = ((String) actualValue).contains((String) item);
+                } else if (item instanceof Matcher) {
+                    contains = ((Matcher) item).matches(actualValue);
+                } else {
+                    throw new MockException('toContain() expected a String or Matcher item, but got: ' + item);
+                }
             } else if (actualValue instanceof Iterable<Object>) {
                 for (Object nextItem : (Iterable<Object>) actualValue) {
                     if (valuesMatch(nextItem, item)) {
