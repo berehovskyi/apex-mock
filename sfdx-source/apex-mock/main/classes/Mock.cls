@@ -19,7 +19,7 @@ public class Mock {
      * @example
      * IService mock = (IService) Mock.of(IService.class, 'service');
      */
-    public static Object of(Type type, String mockName) {
+    public static Object of(final Type type, final String mockName) {
         MockProvider provider = new MockProvider(mockName);
         Object stub = Test.createStub(type, provider);
         PROVIDERS.put(stub, provider);
@@ -33,7 +33,7 @@ public class Mock {
      * @example
      * IService mock = (IService) Mock.of(IService.class);
      */
-    public static Object of(Type type) {
+    public static Object of(final Type type) {
         return of(type, null);
     }
 
@@ -44,7 +44,7 @@ public class Mock {
      * @example
      * String mockName = Mock.getMockName(mock);
      */
-    public static String getMockName(Object stub) {
+    public static String getMockName(final Object stub) {
         return PROVIDERS.get(stub)?.mockName;
     }
 
@@ -56,7 +56,7 @@ public class Mock {
      * @example
      * Mock.MethodSpy doWorkSpy = Mock.spyOn(mock, 'doWork');
      */
-    public static MethodSpy spyOn(Object stub, String methodName) {
+    public static MethodSpy spyOn(final Object stub, final String methodName) {
         return spyOn(stub, methodName, null);
     }
 
@@ -69,7 +69,7 @@ public class Mock {
      * @example
      * Mock.MethodSpy doWorkStringSpy = Mock.spyOn(mock, 'doWork', new List<Type>{ String.class });
      */
-    public static MethodSpy spyOn(Object stub, String methodName, List<Type> parameterTypes) {
+    public static MethodSpy spyOn(final Object stub, final String methodName, final List<Type> parameterTypes) {
         failUnless(PROVIDERS.containsKey(stub), 'Object is not a valid Mock instance.');
         return new MethodSpy(PROVIDERS.get(stub), methodName, parameterTypes);
     }
@@ -81,7 +81,7 @@ public class Mock {
      * @example
      * Mock.MockExpectation expectation = Mock.expect(mock);
      */
-    public static MockExpectation expect(Object stub) {
+    public static MockExpectation expect(final Object stub) {
         if (PROVIDERS.containsKey(stub)) {
             return new MockExpectation(PROVIDERS.get(stub));
         }
@@ -94,7 +94,7 @@ public class Mock {
      * @example
      * Mock.clear(mock);
      */
-    public static void clear(Object stub) {
+    public static void clear(final Object stub) {
         MockProvider provider = PROVIDERS.get(stub);
         if (provider != null) {
             provider.clear();
@@ -116,7 +116,7 @@ public class Mock {
      * @example
      * Mock.reset(mock);
      */
-    public static void reset(Object stub) {
+    public static void reset(final Object stub) {
         MockProvider provider = PROVIDERS.get(stub);
         if (provider != null) {
             provider.reset();
@@ -139,7 +139,7 @@ public class Mock {
      * @example
      * Mock.MockExpectation expectation = Mock.expect(Mock.spyOn(mock, 'doWork'));
      */
-    public static MockExpectation expect(MethodSpy spy) {
+    public static MockExpectation expect(final MethodSpy spy) {
         return new MockExpectation(spy.provider, spy.methodName, spy.methodKey, spy.hasSignature);
     }
 
@@ -163,7 +163,7 @@ public class Mock {
      * @example
      * Mock.HttpMockExpectation httpExpectation = Mock.expect(httpMock);
      */
-    public static HttpMockExpectation expect(HttpMock mock) {
+    public static HttpMockExpectation expect(final HttpMock mock) {
         return new HttpMockExpectation(mock);
     }
 
@@ -174,7 +174,7 @@ public class Mock {
      * @example
      * Mock.ExceptionExpectation exceptionExpectation = Mock.expect(block);
      */
-    public static ExceptionExpectation expect(Block b) {
+    public static ExceptionExpectation expect(final Block b) {
         return new ExceptionExpectation(b);
     }
 
@@ -271,7 +271,7 @@ public class Mock {
      * @param type The type to match
      * @return A Matcher instance
      */
-    public static Matcher any(Type type) {
+    public static Matcher any(final Type type) {
         return new TypeMatcher(type);
     }
 
@@ -288,7 +288,7 @@ public class Mock {
      * @param sObjectType The SObject type to match
      * @return A Matcher instance
      */
-    public static Matcher anySObject(Schema.SObjectType sObjectType) {
+    public static Matcher anySObject(final Schema.SObjectType sObjectType) {
         return new SObjectMatcher(sObjectType);
     }
 
@@ -299,7 +299,7 @@ public class Mock {
      * @example
      * Mock.Matcher notString = Mock.notx(Mock.anyString());
      */
-    public static Matcher notx(Matcher matcher) {
+    public static Matcher notx(final Matcher matcher) {
         return new NotMatcher(matcher);
     }
 
@@ -310,7 +310,7 @@ public class Mock {
      * @example
      * Mock.Matcher hasName = Mock.objectContaining(new Map<String, Object>{ 'Name' => 'Acme' });
      */
-    public static Matcher objectContaining(Map<String, Object> expected) {
+    public static Matcher objectContaining(final Map<String, Object> expected) {
         return new ObjectContainingMatcher(expected);
     }
 
@@ -321,7 +321,7 @@ public class Mock {
      * @example
      * Mock.Matcher accountLike = Mock.sObjectContaining(new Account(Name = 'Acme'));
      */
-    public static Matcher sObjectContaining(SObject expected) {
+    public static Matcher sObjectContaining(final SObject expected) {
         return new ObjectContainingMatcher(expected.getPopulatedFieldsAsMap());
     }
 
@@ -332,7 +332,7 @@ public class Mock {
      * @example
      * Mock.Matcher hasField = Mock.sObjectContaining(new Map<SObjectField, Object>{ Account.Name => 'Acme' });
      */
-    public static Matcher sObjectContaining(Map<SObjectField, Object> expected) {
+    public static Matcher sObjectContaining(final Map<SObjectField, Object> expected) {
         Map<String, Object> stringMap = new Map<String, Object>();
         for (SObjectField field : expected.keySet()) {
             stringMap.put(String.valueOf(field), expected.get(field));
@@ -347,7 +347,7 @@ public class Mock {
      * @example
      * Mock.Matcher hasText = Mock.stringContaining('value');
      */
-    public static Matcher stringContaining(String expected) {
+    public static Matcher stringContaining(final String expected) {
         return new StringContainingMatcher(expected);
     }
 
@@ -358,7 +358,7 @@ public class Mock {
      * @example
      * Mock.Matcher hasItem = Mock.iterableContaining('value');
      */
-    public static Matcher iterableContaining(Object expected) {
+    public static Matcher iterableContaining(final Object expected) {
         return new IterableContainingMatcher(expected);
     }
 
@@ -369,7 +369,7 @@ public class Mock {
      * @example
      * Id accountId = Mock.fakeId(Account.SObjectType);
      */
-    public static Id fakeId(Schema.SObjectType sObjectType) {
+    public static Id fakeId(final Schema.SObjectType sObjectType) {
         String keyPrefix = sObjectType.getDescribe(SObjectDescribeOptions.DEFERRED).getKeyPrefix();
         fakeIdCount++;
         return Id.valueOf(keyPrefix + '0'.repeat(12 - String.valueOf(fakeIdCount).length()) + fakeIdCount);
@@ -383,7 +383,7 @@ public class Mock {
      * @example
      * List<Id> accountIds = Mock.fakeIds(Account.SObjectType, 2);
      */
-    public static List<Id> fakeIds(Schema.SObjectType sObjectType, Integer count) {
+    public static List<Id> fakeIds(final Schema.SObjectType sObjectType, final Integer count) {
         List<Id> ids = new List<Id>();
         for (Integer i = 0; i < count; i++) {
             ids.add(fakeId(sObjectType));
@@ -457,7 +457,7 @@ public class Mock {
         public final String methodKey;
         public final Boolean hasSignature;
 
-        private MethodSpy(MockProvider provider, String methodName, List<Type> parameterTypes) {
+        private MethodSpy(final MockProvider provider, final String methodName, final List<Type> parameterTypes) {
             this.provider = provider;
             this.methodName = methodName;
             this.hasSignature = parameterTypes != null;
@@ -487,7 +487,7 @@ public class Mock {
          * @example
          * spy.mockReturnValue('value');
          */
-        public MethodSpy mockReturnValue(Object value) {
+        public MethodSpy mockReturnValue(final Object value) {
             provider.setReturnValue(methodKey, value);
             return this;
         }
@@ -500,7 +500,7 @@ public class Mock {
          * @example
          * spy.mockReturnValueOnce('value');
          */
-        public MethodSpy mockReturnValueOnce(Object value) {
+        public MethodSpy mockReturnValueOnce(final Object value) {
             provider.addReturnValueOnce(methodKey, value);
             return this;
         }
@@ -512,7 +512,7 @@ public class Mock {
          * @example
          * spy.mockThrow(new Mock.MockException('boom'));
          */
-        public MethodSpy mockThrow(Exception error) {
+        public MethodSpy mockThrow(final Exception error) {
             provider.setException(methodKey, error);
             return this;
         }
@@ -524,7 +524,7 @@ public class Mock {
          * @example
          * spy.mockImplementation(new MyCallback());
          */
-        public MethodSpy mockImplementation(Callback callback) {
+        public MethodSpy mockImplementation(final Callback callback) {
             provider.setCallback(methodKey, callback);
             return this;
         }
@@ -539,7 +539,7 @@ public class Mock {
          *     .whenCalledWith(new List<Object>{ 1, 2 })
          *     .mockReturnValue(3);
          */
-        public WhenCalledWithStub whenCalledWith(List<Object> expectedArgs) {
+        public WhenCalledWithStub whenCalledWith(final List<Object> expectedArgs) {
             return new WhenCalledWithStub(provider.addConditionalBehavior(methodKey, expectedArgs));
         }
     }
@@ -550,7 +550,7 @@ public class Mock {
     public class WhenCalledWithStub {
         private final ConditionalBehavior behavior;
 
-        private WhenCalledWithStub(ConditionalBehavior behavior) {
+        private WhenCalledWithStub(final ConditionalBehavior behavior) {
             this.behavior = behavior;
         }
 
@@ -561,7 +561,7 @@ public class Mock {
          * @example
          * stub.mockReturnValue('value');
          */
-        public WhenCalledWithStub mockReturnValue(Object value) {
+        public WhenCalledWithStub mockReturnValue(final Object value) {
             return setDefaultAction(value, null, null);
         }
 
@@ -572,7 +572,7 @@ public class Mock {
          * @example
          * stub.mockReturnValueOnce('value');
          */
-        public WhenCalledWithStub mockReturnValueOnce(Object value) {
+        public WhenCalledWithStub mockReturnValueOnce(final Object value) {
             return addOnceAction(value, null, null);
         }
 
@@ -583,7 +583,7 @@ public class Mock {
          * @example
          * stub.mockThrow(new Mock.MockException('boom'));
          */
-        public WhenCalledWithStub mockThrow(Exception error) {
+        public WhenCalledWithStub mockThrow(final Exception error) {
             return setDefaultAction(null, error, null);
         }
 
@@ -594,7 +594,7 @@ public class Mock {
          * @example
          * stub.mockThrowOnce(new Mock.MockException('boom'));
          */
-        public WhenCalledWithStub mockThrowOnce(Exception error) {
+        public WhenCalledWithStub mockThrowOnce(final Exception error) {
             return addOnceAction(null, error, null);
         }
 
@@ -605,7 +605,7 @@ public class Mock {
          * @example
          * stub.mockImplementation(callback);
          */
-        public WhenCalledWithStub mockImplementation(Callback callback) {
+        public WhenCalledWithStub mockImplementation(final Callback callback) {
             return setDefaultAction(null, null, callback);
         }
 
@@ -616,7 +616,7 @@ public class Mock {
          * @example
          * stub.mockImplementationOnce(callback);
          */
-        public WhenCalledWithStub mockImplementationOnce(Callback callback) {
+        public WhenCalledWithStub mockImplementationOnce(final Callback callback) {
             return addOnceAction(null, null, callback);
         }
 
@@ -644,25 +644,25 @@ public class Mock {
         private final Boolean isValueAssertion;
         private final String boundMethodRequiredMessage = 'Method name must be provided when not using expect(spy).';
 
-        private MockExpectation(MockProvider provider) {
+        private MockExpectation(final MockProvider provider) {
             this(provider, null, null, false, false);
         }
 
         private MockExpectation(
-            MockProvider provider,
-            String boundMethodName,
-            String boundMethodKey,
-            Boolean boundHasSignature
+            final MockProvider provider,
+            final String boundMethodName,
+            final String boundMethodKey,
+            final Boolean boundHasSignature
         ) {
             this(provider, boundMethodName, boundMethodKey, boundHasSignature, false);
         }
 
         private MockExpectation(
-            MockProvider provider,
-            String boundMethodName,
-            String boundMethodKey,
-            Boolean boundHasSignature,
-            Boolean isNegated
+            final MockProvider provider,
+            final String boundMethodName,
+            final String boundMethodKey,
+            final Boolean boundHasSignature,
+            final Boolean isNegated
         ) {
             this.provider = provider;
             this.boundMethodName = boundMethodName;
@@ -673,7 +673,7 @@ public class Mock {
             this.isValueAssertion = false;
         }
 
-        private MockExpectation(Object actualValue, Boolean isNegated) {
+        private MockExpectation(final Object actualValue, final Boolean isNegated) {
             this.provider = null;
             this.boundMethodName = null;
             this.boundMethodKey = null;
@@ -707,7 +707,7 @@ public class Mock {
          * @example
          * expectation.toBe('value');
          */
-        public void toBe(Object expected) {
+        public void toBe(final Object expected) {
             validateAssertion();
             failIf(
                 !isNegated && actualValue !== expected,
@@ -725,7 +725,7 @@ public class Mock {
          * @example
          * expectation.toEqual('value');
          */
-        public void toEqual(Object expected) {
+        public void toEqual(final Object expected) {
             validateAssertion();
             failIf(
                 !isNegated && actualValue != expected,
@@ -738,12 +738,22 @@ public class Mock {
         }
 
         /**
+         * Alias for toEqual().
+         * @param expected The expected value
+         * @example
+         * expectation.toEq('value');
+         */
+        public void toEq(final Object expected) {
+            toEqual(expected);
+        }
+
+        /**
          * Asserts that a value matches the specified regex pattern.
          * @param regex The regular expression
          * @example
          * expectation.toMatch('^a.*');
          */
-        public void toMatch(String regex) {
+        public void toMatch(final String regex) {
             validateAssertion();
             String actualStr = String.valueOf(actualValue);
             Pattern p = Pattern.compile(regex);
@@ -760,7 +770,7 @@ public class Mock {
          * @example
          * expectation.toMatch(Mock.any());
          */
-        public void toMatch(Matcher matcher) {
+        public void toMatch(final Matcher matcher) {
             validateAssertion();
             Boolean matches = matcher.matches(actualValue);
 
@@ -774,7 +784,7 @@ public class Mock {
          * @example
          * expectation.toContain('value');
          */
-        public void toContain(Object item) {
+        public void toContain(final Object item) {
             validateAssertion();
             Boolean contains = false;
 
@@ -840,11 +850,38 @@ public class Mock {
          * @example
          * expectation.toBeLessThan(1);
          */
-        public void toBeLessThan(Decimal value) {
-            validateAssertion();
-            Decimal actualDec = (Decimal) actualValue;
-            failIf(!isNegated && !(actualDec < value), 'Expected ' + actualValue + ' to be less than ' + value);
-            failIf(isNegated && actualDec < value, 'Expected ' + actualValue + ' NOT to be less than ' + value);
+        public void toBeLessThan(final Decimal value) {
+            assertNumericComparison(value, false, true, 'toBeLessThan');
+        }
+
+        /**
+         * Alias for toBeLessThan().
+         * @param value The maximum value (exclusive)
+         * @example
+         * expectation.toBeLt(1);
+         */
+        public void toBeLt(final Decimal value) {
+            assertNumericComparison(value, false, true, 'toBeLt');
+        }
+
+        /**
+         * Asserts that the value is less than or equal to the specified number.
+         * @param value The maximum value (inclusive)
+         * @example
+         * expectation.toBeLessThanOrEqual(1);
+         */
+        public void toBeLessThanOrEqual(final Decimal value) {
+            assertNumericComparison(value, true, true, 'toBeLessThanOrEqual');
+        }
+
+        /**
+         * Alias for toBeLessThanOrEqual().
+         * @param value The maximum value (inclusive)
+         * @example
+         * expectation.toBeLe(1);
+         */
+        public void toBeLe(final Decimal value) {
+            assertNumericComparison(value, true, true, 'toBeLe');
         }
 
         /**
@@ -853,11 +890,65 @@ public class Mock {
          * @example
          * expectation.toBeGreaterThan(1);
          */
-        public void toBeGreaterThan(Decimal value) {
+        public void toBeGreaterThan(final Decimal value) {
+            assertNumericComparison(value, false, false, 'toBeGreaterThan');
+        }
+
+        /**
+         * Alias for toBeGreaterThan().
+         * @param value The minimum value (exclusive)
+         * @example
+         * expectation.toBeGt(1);
+         */
+        public void toBeGt(final Decimal value) {
+            assertNumericComparison(value, false, false, 'toBeGt');
+        }
+
+        /**
+         * Asserts that the value is greater than or equal to the specified number.
+         * @param value The minimum value (inclusive)
+         * @example
+         * expectation.toBeGreaterThanOrEqual(1);
+         */
+        public void toBeGreaterThanOrEqual(final Decimal value) {
+            assertNumericComparison(value, true, false, 'toBeGreaterThanOrEqual');
+        }
+
+        /**
+         * Alias for toBeGreaterThanOrEqual().
+         * @param value The minimum value (inclusive)
+         * @example
+         * expectation.toBeGe(1);
+         */
+        public void toBeGe(final Decimal value) {
+            assertNumericComparison(value, true, false, 'toBeGe');
+        }
+
+        private void assertNumericComparison(
+            Decimal value,
+            Boolean inclusive,
+            Boolean isLessThanComparison,
+            String assertionName
+        ) {
             validateAssertion();
-            Decimal actualDec = (Decimal) actualValue;
-            failIf(!isNegated && !(actualDec > value), 'Expected ' + actualValue + ' to be greater than ' + value);
-            failIf(isNegated && actualDec > value, 'Expected ' + actualValue + ' NOT to be greater than ' + value);
+            Decimal actualDec = getNumericActual(assertionName);
+            failIf(value == null, assertionName + '() requires a numeric comparison value, but got null.');
+
+            Boolean matches = isLessThanComparison
+                ? (inclusive ? actualDec <= value : actualDec < value)
+                : (inclusive ? actualDec >= value : actualDec > value);
+            String relation = (isLessThanComparison ? 'less than' : 'greater than') + (inclusive ? ' or equal to' : '');
+            failIf(!isNegated && !matches, 'Expected ' + actualValue + ' to be ' + relation + ' ' + value);
+            failIf(isNegated && matches, 'Expected ' + actualValue + ' NOT to be ' + relation + ' ' + value);
+        }
+
+        private Decimal getNumericActual(String assertionName) {
+            failIf(actualValue == null, assertionName + '() requires a numeric actual value, but got null.');
+            try {
+                return (Decimal) actualValue;
+            } catch (TypeException e) {
+                throw new MockException(assertionName + '() requires a numeric actual value, but got: ' + actualValue);
+            }
         }
 
         private void validateAssertion() {
@@ -887,7 +978,7 @@ public class Mock {
          * @example
          * expectation.toHaveBeenCalled('doWork');
          */
-        public MockExpectation toHaveBeenCalled(String methodName) {
+        public MockExpectation toHaveBeenCalled(final String methodName) {
             validateMockVerification();
             return verifyCalled(methodName, provider.getCalls(methodName));
         }
@@ -899,7 +990,7 @@ public class Mock {
          * @example
          * expectation.toHaveBeenCalledTimes(1);
          */
-        public MockExpectation toHaveBeenCalledTimes(Integer times) {
+        public MockExpectation toHaveBeenCalledTimes(final Integer times) {
             validateMockVerification();
             MethodScope scope = getBoundScope();
             return verifyCalledTimes(scope.methodName, scope.calls, times);
@@ -913,7 +1004,7 @@ public class Mock {
          * @example
          * expectation.toHaveBeenCalledTimes('doWork', 1);
          */
-        public MockExpectation toHaveBeenCalledTimes(String methodName, Integer times) {
+        public MockExpectation toHaveBeenCalledTimes(final String methodName, final Integer times) {
             validateMockVerification();
             return verifyCalledTimes(methodName, provider.getCalls(methodName), times);
         }
@@ -925,7 +1016,7 @@ public class Mock {
          * @example
          * Mock.expect(spy).toHaveBeenCalledWith(new List<Object>{ 'test', 100 });
          */
-        public MockExpectation toHaveBeenCalledWith(List<Object> expectedArgs) {
+        public MockExpectation toHaveBeenCalledWith(final List<Object> expectedArgs) {
             validateMockVerification();
             MethodScope scope = getBoundScope();
             return verifyCalledWith(scope.methodName, scope.calls, expectedArgs);
@@ -939,7 +1030,7 @@ public class Mock {
          * @example
          * expectation.toHaveBeenCalledWith('doWork', new List<Object>{ 'value' });
          */
-        public MockExpectation toHaveBeenCalledWith(String methodName, List<Object> expectedArgs) {
+        public MockExpectation toHaveBeenCalledWith(final String methodName, final List<Object> expectedArgs) {
             validateMockVerification();
             return verifyCalledWith(methodName, provider.getCalls(methodName), expectedArgs);
         }
@@ -951,11 +1042,14 @@ public class Mock {
          * @example
          * expectation.lastCalledWith(new List<Object>{ 'value' });
          */
-        public MockExpectation lastCalledWith(List<Object> expectedArgs) {
+        public MockExpectation lastCalledWith(final List<Object> expectedArgs) {
             validateMockVerification();
             failIf(boundMethodName == null, 'Method name must be provided for lastCalledWith.');
             List<MethodCall> calls = getBoundCalls();
-            failIf(calls.isEmpty(), 'Expected method "' + boundMethodName + '" to have been called, but it was not.');
+            if (calls.isEmpty()) {
+                failIf(!isNegated, 'Expected method "' + boundMethodName + '" to have been called, but it was not.');
+                return this;
+            }
 
             MethodCall lastCall = calls.get(calls.size() - 1);
             String prefix = getNamePrefix();
@@ -987,14 +1081,18 @@ public class Mock {
          * @example
          * expectation.nthCalledWith(1, new List<Object>{ 'value' });
          */
-        public MockExpectation nthCalledWith(Integer n, List<Object> expectedArgs) {
+        public MockExpectation nthCalledWith(final Integer n, final List<Object> expectedArgs) {
             validateMockVerification();
             failIf(boundMethodName == null, 'Method name must be provided for nthCalledWith.');
+            failIf(n == null || n < 1, 'Call index must be greater than 0.');
             List<MethodCall> calls = getBoundCalls();
-            failIf(
-                calls.size() < n,
-                'Expected at least ' + n + ' calls to "' + boundMethodName + '", but only found ' + calls.size()
-            );
+            if (calls.size() < n) {
+                failIf(
+                    !isNegated,
+                    'Expected at least ' + n + ' calls to "' + boundMethodName + '", but only found ' + calls.size()
+                );
+                return this;
+            }
 
             MethodCall nthCall = calls.get(n - 1); // 1-based index
             String prefix = getNamePrefix();
@@ -1041,7 +1139,7 @@ public class Mock {
          * @example
          * expectation.toHaveReturned('doWork');
          */
-        public MockExpectation toHaveReturned(String methodName) {
+        public MockExpectation toHaveReturned(final String methodName) {
             validateMockVerification();
             return verifyReturned(methodName, provider.getCalls(methodName));
         }
@@ -1053,7 +1151,7 @@ public class Mock {
          * @example
          * expectation.toHaveReturnedTimes(1);
          */
-        public MockExpectation toHaveReturnedTimes(Integer times) {
+        public MockExpectation toHaveReturnedTimes(final Integer times) {
             validateMockVerification();
             MethodScope scope = getBoundScope();
             return verifyReturnedTimes(scope.methodName, scope.calls, times);
@@ -1067,7 +1165,7 @@ public class Mock {
          * @example
          * expectation.toHaveReturnedTimes('doWork', 1);
          */
-        public MockExpectation toHaveReturnedTimes(String methodName, Integer times) {
+        public MockExpectation toHaveReturnedTimes(final String methodName, final Integer times) {
             validateMockVerification();
             return verifyReturnedTimes(methodName, provider.getCalls(methodName), times);
         }
@@ -1079,7 +1177,7 @@ public class Mock {
          * @example
          * expectation.toHaveReturnedWith('value');
          */
-        public MockExpectation toHaveReturnedWith(Object expectedValue) {
+        public MockExpectation toHaveReturnedWith(final Object expectedValue) {
             validateMockVerification();
             MethodScope scope = getBoundScope();
             return verifyReturnedWith(scope.methodName, scope.calls, expectedValue);
@@ -1093,7 +1191,7 @@ public class Mock {
          * @example
          * expectation.toHaveReturnedWith('doWork', 'value');
          */
-        public MockExpectation toHaveReturnedWith(String methodName, Object expectedValue) {
+        public MockExpectation toHaveReturnedWith(final String methodName, final Object expectedValue) {
             validateMockVerification();
             return verifyReturnedWith(methodName, provider.getCalls(methodName), expectedValue);
         }
@@ -1106,7 +1204,7 @@ public class Mock {
          * @example
          * expectation.toHaveNthReturnedWith(1, 'value');
          */
-        public MockExpectation toHaveNthReturnedWith(Integer n, Object expectedValue) {
+        public MockExpectation toHaveNthReturnedWith(final Integer n, final Object expectedValue) {
             validateMockVerification();
             MethodScope scope = getBoundScope();
             return verifyNthReturnedWith(scope.methodName, scope.calls, n, expectedValue);
@@ -1121,7 +1219,11 @@ public class Mock {
          * @example
          * expectation.toHaveNthReturnedWith('doWork', 1, 'value');
          */
-        public MockExpectation toHaveNthReturnedWith(String methodName, Integer n, Object expectedValue) {
+        public MockExpectation toHaveNthReturnedWith(
+            final String methodName,
+            final Integer n,
+            final Object expectedValue
+        ) {
             validateMockVerification();
             return verifyNthReturnedWith(methodName, provider.getCalls(methodName), n, expectedValue);
         }
@@ -1133,7 +1235,7 @@ public class Mock {
          * @example
          * expectation.toHaveLastReturnedWith('value');
          */
-        public MockExpectation toHaveLastReturnedWith(Object expectedValue) {
+        public MockExpectation toHaveLastReturnedWith(final Object expectedValue) {
             validateMockVerification();
             MethodScope scope = getBoundScope();
             return verifyLastReturnedWith(scope.methodName, scope.calls, expectedValue);
@@ -1147,7 +1249,7 @@ public class Mock {
          * @example
          * expectation.toHaveLastReturnedWith('doWork', 'value');
          */
-        public MockExpectation toHaveLastReturnedWith(String methodName, Object expectedValue) {
+        public MockExpectation toHaveLastReturnedWith(final String methodName, final Object expectedValue) {
             validateMockVerification();
             return verifyLastReturnedWith(methodName, provider.getCalls(methodName), expectedValue);
         }
@@ -1313,10 +1415,13 @@ public class Mock {
         ) {
             String prefix = getNamePrefix();
             failIf(n == null || n < 1, 'Call index must be greater than 0.');
-            failIf(
-                calls.size() < n,
-                'Expected at least ' + n + ' calls to "' + methodName + '", but only found ' + calls.size()
-            );
+            if (calls.size() < n) {
+                failIf(
+                    !isNegated,
+                    'Expected at least ' + n + ' calls to "' + methodName + '", but only found ' + calls.size()
+                );
+                return this;
+            }
 
             MethodCall nthCall = calls.get(n - 1);
             if (!isNegated) {
@@ -1367,10 +1472,13 @@ public class Mock {
             Object expectedValue
         ) {
             String prefix = getNamePrefix();
-            failIf(
-                calls.isEmpty(),
-                prefix + 'Expected method "' + methodName + '" to have been called, but it was not.'
-            );
+            if (calls.isEmpty()) {
+                failIf(
+                    !isNegated,
+                    prefix + 'Expected method "' + methodName + '" to have been called, but it was not.'
+                );
+                return this;
+            }
             return verifyNthReturnedWith(methodName, calls, calls.size(), expectedValue);
         }
 
@@ -1418,7 +1526,7 @@ public class Mock {
          * Constructor for ExceptionExpectation.
          * @param b The block of code to test
          */
-        public ExceptionExpectation(Block b) {
+        public ExceptionExpectation(final Block b) {
             this.b = b;
         }
 
@@ -1450,7 +1558,7 @@ public class Mock {
          * @example
          * exceptionExpectation.toThrow('value');
          */
-        public void toThrow(String message) {
+        public void toThrow(final String message) {
             execute();
             failIf(
                 caughtException == null,
@@ -1468,7 +1576,7 @@ public class Mock {
          * @example
          * exceptionExpectation.toThrow(CustomException.class);
          */
-        public void toThrow(Type exceptionType) {
+        public void toThrow(final Type exceptionType) {
             execute();
             failIf(
                 caughtException == null,
@@ -1517,7 +1625,7 @@ public class Mock {
          * @example
          * new MethodCall('doWork', new List<Object>());
          */
-        public MethodCall(String methodName, List<Object> args) {
+        public MethodCall(final String methodName, final List<Object> args) {
             this.methodName = methodName;
             this.args = args;
             this.didReturn = false;
@@ -1530,7 +1638,7 @@ public class Mock {
          * @example
          * call.markReturned('value');
          */
-        public void markReturned(Object returnValue) {
+        public void markReturned(final Object returnValue) {
             this.didReturn = true;
             this.returnValue = returnValue;
         }
@@ -1564,7 +1672,7 @@ public class Mock {
          * Constructor for MockProvider with a name.
          * @param mockName The name of the mock
          */
-        public MockProvider(String mockName) {
+        public MockProvider(final String mockName) {
             this.mockName = mockName;
         }
 
@@ -1575,7 +1683,7 @@ public class Mock {
          * @example
          * provider.setReturnValue('doWork', 'value');
          */
-        public void setReturnValue(String methodName, Object returnValue) {
+        public void setReturnValue(final String methodName, final Object returnValue) {
             returnValues.put(methodName, returnValue);
         }
 
@@ -1586,7 +1694,7 @@ public class Mock {
          * @example
          * provider.addReturnValueOnce('doWork', 'value');
          */
-        public void addReturnValueOnce(String methodName, Object returnValue) {
+        public void addReturnValueOnce(final String methodName, final Object returnValue) {
             if (!returnValuesOnce.containsKey(methodName)) {
                 returnValuesOnce.put(methodName, new List<Object>());
             }
@@ -1600,7 +1708,7 @@ public class Mock {
          * @example
          * provider.setException('doWork', new Mock.MockException('boom'));
          */
-        public void setException(String methodName, Exception error) {
+        public void setException(final String methodName, final Exception error) {
             exceptions.put(methodName, error);
         }
 
@@ -1611,7 +1719,7 @@ public class Mock {
          * @example
          * provider.setCallback('doWork', callback);
          */
-        public void setCallback(String methodName, Callback callback) {
+        public void setCallback(final String methodName, final Callback callback) {
             callbacks.put(methodName, callback);
         }
 
@@ -1662,7 +1770,7 @@ public class Mock {
          * @example
          * provider.getCalls('doWork');
          */
-        public List<MethodCall> getCalls(String methodName) {
+        public List<MethodCall> getCalls(final String methodName) {
             return callsByMethod.get(methodName) ?? new List<MethodCall>();
         }
 
@@ -1673,7 +1781,7 @@ public class Mock {
          * @example
          * provider.getCallsByKey('methodKey');
          */
-        public List<MethodCall> getCallsByKey(String methodKey) {
+        public List<MethodCall> getCallsByKey(final String methodKey) {
             return callsByKey.get(methodKey) ?? new List<MethodCall>();
         }
 
@@ -1724,12 +1832,12 @@ public class Mock {
          * );
          */
         public Object handleMethodCall(
-            Object stubbedObject,
-            String stubbedMethodName,
-            Type returnType,
-            List<Type> listOfParamTypes,
-            List<String> listOfParamNames,
-            List<Object> listOfArgs
+            final Object stubbedObject,
+            final String stubbedMethodName,
+            final Type returnType,
+            final List<Type> listOfParamTypes,
+            final List<String> listOfParamNames,
+            final List<Object> listOfArgs
         ) {
             String methodKey = buildMethodKey(stubbedMethodName, listOfParamTypes);
 
@@ -1809,7 +1917,7 @@ public class Mock {
          * @param args The arguments passed to the mocked method
          * @return The value to return from the mocked method
          */
-        Object call(List<Object> args);
+        Object call(final List<Object> args);
     }
 
     /**
@@ -1833,7 +1941,7 @@ public class Mock {
          * @example
          * matcher.matches('value');
          */
-        Boolean matches(Object actual);
+        Boolean matches(final Object actual);
     }
 
     /**
@@ -1847,7 +1955,7 @@ public class Mock {
          * @example
          * matcher.matches('value');
          */
-        public Boolean matches(Object actual) {
+        public Boolean matches(final Object actual) {
             return true;
         }
     }
@@ -1863,7 +1971,7 @@ public class Mock {
          * @example
          * matcher.matches('value');
          */
-        public Boolean matches(Object actual) {
+        public Boolean matches(final Object actual) {
             return actual instanceof String;
         }
     }
@@ -1879,7 +1987,7 @@ public class Mock {
          * @example
          * matcher.matches(1);
          */
-        public Boolean matches(Object actual) {
+        public Boolean matches(final Object actual) {
             return actual instanceof Integer;
         }
     }
@@ -1895,7 +2003,7 @@ public class Mock {
          * @example
          * matcher.matches(2.5);
          */
-        public Boolean matches(Object actual) {
+        public Boolean matches(final Object actual) {
             return actual instanceof Decimal;
         }
     }
@@ -1911,7 +2019,7 @@ public class Mock {
          * @example
          * matcher.matches('00100000000000AAA');
          */
-        public Boolean matches(Object actual) {
+        public Boolean matches(final Object actual) {
             return actual instanceof Id;
         }
     }
@@ -1927,7 +2035,7 @@ public class Mock {
          * @example
          * matcher.matches(true);
          */
-        public Boolean matches(Object actual) {
+        public Boolean matches(final Object actual) {
             return actual instanceof Boolean;
         }
     }
@@ -1943,7 +2051,7 @@ public class Mock {
          * @example
          * matcher.matches(someList);
          */
-        public Boolean matches(Object actual) {
+        public Boolean matches(final Object actual) {
             return actual instanceof List<Object>;
         }
     }
@@ -1959,7 +2067,7 @@ public class Mock {
          * @example
          * matcher.matches(byStringMap);
          */
-        public Boolean matches(Object actual) {
+        public Boolean matches(final Object actual) {
             return actual instanceof Map<String, Object>;
         }
     }
@@ -1975,7 +2083,7 @@ public class Mock {
          * @example
          * matcher.matches(Date.today());
          */
-        public Boolean matches(Object actual) {
+        public Boolean matches(final Object actual) {
             return actual instanceof Date;
         }
     }
@@ -1991,7 +2099,7 @@ public class Mock {
          * @example
          * matcher.matches(Datetime.now());
          */
-        public Boolean matches(Object actual) {
+        public Boolean matches(final Object actual) {
             return actual instanceof Datetime;
         }
     }
@@ -2007,7 +2115,7 @@ public class Mock {
          * @example
          * matcher.matches(someTime);
          */
-        public Boolean matches(Object actual) {
+        public Boolean matches(final Object actual) {
             return actual instanceof Time;
         }
     }
@@ -2031,7 +2139,7 @@ public class Mock {
          * @example
          * new SObjectMatcher(Account.SObjectType);
          */
-        public SObjectMatcher(Schema.SObjectType sObjectType) {
+        public SObjectMatcher(final Schema.SObjectType sObjectType) {
             this.sObjectType = sObjectType;
         }
 
@@ -2042,7 +2150,7 @@ public class Mock {
          * @example
          * matcher.matches(account);
          */
-        public Boolean matches(Object actual) {
+        public Boolean matches(final Object actual) {
             if (!(actual instanceof SObject)) {
                 return false;
             }
@@ -2062,7 +2170,7 @@ public class Mock {
          * Constructor for TypeMatcher.
          * @param expectedType Expected type
          */
-        public TypeMatcher(Type expectedType) {
+        public TypeMatcher(final Type expectedType) {
             this.expectedType = expectedType;
         }
         /**
@@ -2072,7 +2180,7 @@ public class Mock {
          * @example
          * matcher.matches(String.class);
          */
-        public Boolean matches(Object actual) {
+        public Boolean matches(final Object actual) {
             if (actual == null) {
                 return false;
             }
@@ -2091,7 +2199,7 @@ public class Mock {
          * @example
          * new NotMatcher(Mock.any());
          */
-        public NotMatcher(Matcher matcher) {
+        public NotMatcher(final Matcher matcher) {
             this.matcher = matcher;
         }
         /**
@@ -2101,7 +2209,7 @@ public class Mock {
          * @example
          * matcher.matches('value');
          */
-        public Boolean matches(Object actual) {
+        public Boolean matches(final Object actual) {
             return !matcher.matches(actual);
         }
     }
@@ -2117,7 +2225,7 @@ public class Mock {
          * @example
          * new StringContainingMatcher('value');
          */
-        public StringContainingMatcher(String expected) {
+        public StringContainingMatcher(final String expected) {
             this.expected = expected;
         }
         /**
@@ -2127,7 +2235,7 @@ public class Mock {
          * @example
          * matcher.matches('value');
          */
-        public Boolean matches(Object actual) {
+        public Boolean matches(final Object actual) {
             return actual instanceof String && ((String) actual).contains(expected);
         }
     }
@@ -2141,7 +2249,7 @@ public class Mock {
          * Constructor for IterableContainingMatcher.
          * @param expectedItem Item or matcher
          */
-        public IterableContainingMatcher(Object expectedItem) {
+        public IterableContainingMatcher(final Object expectedItem) {
             this.expectedItem = expectedItem;
         }
         /**
@@ -2151,7 +2259,7 @@ public class Mock {
          * @example
          * matcher.matches(someList);
          */
-        public Boolean matches(Object actual) {
+        public Boolean matches(final Object actual) {
             if (!(actual instanceof Iterable<Object>)) {
                 return false;
             }
@@ -2177,7 +2285,7 @@ public class Mock {
          * Constructor for ObjectContainingMatcher.
          * @param expected Map of field names to values or matchers
          */
-        public ObjectContainingMatcher(Map<String, Object> expected) {
+        public ObjectContainingMatcher(final Map<String, Object> expected) {
             this.expected = expected;
         }
 
@@ -2188,7 +2296,7 @@ public class Mock {
          * @example
          * matcher.matches(o);
          */
-        public Boolean matches(Object actual) {
+        public Boolean matches(final Object actual) {
             if (actual == null) {
                 return false;
             }
@@ -2259,7 +2367,7 @@ public class Mock {
          * res.setStatusCode(200);
          * httpMock.mockResponse('https://example.com', res);
          */
-        public void mockResponse(String url, HttpResponse res) {
+        public void mockResponse(final String url, final HttpResponse res) {
             responses.put(url, res);
         }
 
@@ -2274,7 +2382,7 @@ public class Mock {
          * res.setStatusCode(200);
          * httpMock.mockResponse('GET', 'https://example.com', res);
          */
-        public void mockResponse(String method, String url, HttpResponse res) {
+        public void mockResponse(final String method, final String url, final HttpResponse res) {
             responses.put(method.toUpperCase() + ' ' + url, res);
         }
 
@@ -2286,7 +2394,7 @@ public class Mock {
          * @example
          * httpMock.mockResponse('https://example.com', 'value', 200);
          */
-        public void mockResponse(String url, String body, Integer statusCode) {
+        public void mockResponse(final String url, final String body, final Integer statusCode) {
             mockResponse(null, url, body, statusCode);
         }
 
@@ -2299,7 +2407,7 @@ public class Mock {
          * @example
          * httpMock.mockResponse('GET', 'https://example.com', 'value', 200);
          */
-        public void mockResponse(String method, String url, String body, Integer statusCode) {
+        public void mockResponse(final String method, final String url, final String body, final Integer statusCode) {
             HttpResponse res = new HttpResponse();
             res.setBody(body);
             res.setStatusCode(statusCode);
@@ -2318,7 +2426,7 @@ public class Mock {
          * HttpRequest req = new HttpRequest();
          * httpMock.respond(req);
          */
-        public HttpResponse respond(HttpRequest req) {
+        public HttpResponse respond(final HttpRequest req) {
             requests.add(req);
             String endpoint = req.getEndpoint();
             String method = (req.getMethod() ?? 'GET').toUpperCase();
@@ -2375,11 +2483,11 @@ public class Mock {
          * Constructor for HttpMockExpectation.
          * @param targetMock The mock to verify
          */
-        public HttpMockExpectation(HttpMock targetMock) {
+        public HttpMockExpectation(final HttpMock targetMock) {
             this(targetMock, false);
         }
 
-        private HttpMockExpectation(HttpMock targetMock, Boolean isNegated) {
+        private HttpMockExpectation(final HttpMock targetMock, final Boolean isNegated) {
             this.targetMock = targetMock;
             this.isNegated = isNegated;
         }
@@ -2414,7 +2522,7 @@ public class Mock {
          * @example
          * httpExpectation.toHaveBeenCalledTimes(1);
          */
-        public void toHaveBeenCalledTimes(Integer times) {
+        public void toHaveBeenCalledTimes(final Integer times) {
             Integer actual = targetMock.getRequests().size();
             failIf(!isNegated && actual != times, 'Expected ' + times + ' HTTP calls, but ' + actual + ' were made.');
             failIf(isNegated && actual == times, 'Expected NOT to have ' + times + ' HTTP calls, but it did.');
@@ -2427,7 +2535,7 @@ public class Mock {
          * @example
          * httpExpectation.toHaveBeenCalledWith('https://example.com', 'GET');
          */
-        public void toHaveBeenCalledWith(Object url, Object method) {
+        public void toHaveBeenCalledWith(final Object url, final Object method) {
             toHaveBeenCalledWith(url, method, null, null);
         }
 
@@ -2439,7 +2547,7 @@ public class Mock {
          * @example
          * httpExpectation.toHaveBeenCalledWith('https://example.com', 'GET', 'value');
          */
-        public void toHaveBeenCalledWith(Object url, Object method, Object body) {
+        public void toHaveBeenCalledWith(final Object url, final Object method, final Object body) {
             toHaveBeenCalledWith(url, method, body, null);
         }
 
@@ -2452,7 +2560,12 @@ public class Mock {
          * @example
          * httpExpectation.toHaveBeenCalledWith('https://example.com', 'GET', 'value', new Map<String, Object>());
          */
-        public void toHaveBeenCalledWith(Object url, Object method, Object body, Map<String, Object> headers) {
+        public void toHaveBeenCalledWith(
+            final Object url,
+            final Object method,
+            final Object body,
+            final Map<String, Object> headers
+        ) {
             Boolean matchFound = false;
             for (HttpRequest req : targetMock.getRequests()) {
                 if (requestMatches(req, url, method, body, headers)) {
@@ -2524,7 +2637,7 @@ public class Mock {
         private final String methodName;
         private final List<MethodCall> calls;
 
-        private MethodScope(String methodName, List<MethodCall> calls) {
+        private MethodScope(final String methodName, final List<MethodCall> calls) {
             this.methodName = methodName;
             this.calls = calls;
         }
@@ -2535,7 +2648,7 @@ public class Mock {
         private final Exception error;
         private final Callback callback;
 
-        private ConditionalAction(Object returnValue, Exception error, Callback callback) {
+        private ConditionalAction(final Object returnValue, final Exception error, final Callback callback) {
             this.returnValue = returnValue;
             this.error = error;
             this.callback = callback;
@@ -2547,7 +2660,7 @@ public class Mock {
         private final List<ConditionalAction> onceActions = new List<ConditionalAction>();
         private ConditionalAction defaultAction;
 
-        private ConditionalBehavior(List<Object> expectedArgs) {
+        private ConditionalBehavior(final List<Object> expectedArgs) {
             this.expectedArgs = expectedArgs == null ? null : new List<Object>(expectedArgs);
         }
 

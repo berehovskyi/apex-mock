@@ -566,12 +566,49 @@ private class MockTest {
 
         Assert.isTrue(
             lastCalledWithThrew,
-            'Expected .notx.lastCalledWith to throw when last call matches, but it did not (bug).'
+            'Expected .notx.lastCalledWith to throw when last call matches, but it did not.'
         );
         Assert.isTrue(
             nthCalledWithThrew,
-            'Expected .notx.nthCalledWith to throw when Nth call matches, but it did not (bug).'
+            'Expected .notx.nthCalledWith to throw when Nth call matches, but it did not.'
         );
+    }
+
+    @IsTest
+    static void should_pass_negated_call_history_assertions_when_calls_are_missing() {
+        // Arrange
+        IMockTestService mockService = (IMockTestService) Mock.of(IMockTestService.class);
+        Mock.MethodSpy spy = Mock.spyOn(mockService, 'add');
+
+        // Act & Assert
+        Mock.expect(spy).notx.lastCalledWith(new List<Object>{ 1, 2 });
+        Mock.expect(spy).notx.nthCalledWith(1, new List<Object>{ 1, 2 });
+
+        mockService.add(9, 9);
+
+        Mock.expect(spy).notx.nthCalledWith(2, new List<Object>{ 1, 2 });
+    }
+
+    @IsTest
+    static void should_reject_invalid_nth_called_with_index() {
+        // Arrange
+        IMockTestService mockService = (IMockTestService) Mock.of(IMockTestService.class);
+        Mock.MethodSpy spy = Mock.spyOn(mockService, 'add');
+
+        // Act & Assert
+        try {
+            Mock.expect(spy).nthCalledWith(0, new List<Object>{ 1, 2 });
+            Assert.fail('Should reject zero index');
+        } catch (Mock.MockException e) {
+            Assert.isTrue(e.getMessage().contains('Call index must be greater than 0.'));
+        }
+
+        try {
+            Mock.expect(spy).nthCalledWith(null, new List<Object>{ 1, 2 });
+            Assert.fail('Should reject null index');
+        } catch (Mock.MockException e) {
+            Assert.isTrue(e.getMessage().contains('Call index must be greater than 0.'));
+        }
     }
 
     @IsTest
@@ -630,6 +667,8 @@ private class MockTest {
         Mock.expect('a').toEqual('a');
         Mock.expect(true).toEqual(true);
         Mock.expect(1).notx.toEqual(2);
+        Mock.expect('alias').toEq('alias');
+        Mock.expect('alias').notx.toEq('other');
     }
 
     @IsTest
@@ -1067,6 +1106,24 @@ private class MockTest {
     }
 
     @IsTest
+    static void should_pass_negated_return_value_assertions_when_calls_are_missing() {
+        // Arrange
+        IMockTestService mockService = (IMockTestService) Mock.of(IMockTestService.class);
+        Mock.MethodSpy spy = Mock.spyOn(mockService, 'add');
+
+        // Act & Assert
+        Mock.expect(spy).notx.toHaveLastReturnedWith(4);
+        Mock.expect(spy).notx.toHaveNthReturnedWith(1, 4);
+        Mock.expect(mockService).notx.toHaveLastReturnedWith('add', 4);
+        Mock.expect(mockService).notx.toHaveNthReturnedWith('add', 1, 4);
+
+        mockService.add(2, 2);
+
+        Mock.expect(spy).notx.toHaveNthReturnedWith(2, 4);
+        Mock.expect(mockService).notx.toHaveNthReturnedWith('add', 2, 4);
+    }
+
+    @IsTest
     static void should_treat_void_calls_as_successful_null_returns() {
         // Arrange
         IMockTestService mockService = (IMockTestService) Mock.of(IMockTestService.class);
@@ -1371,12 +1428,39 @@ private class MockTest {
     }
 
     @IsTest
+    static void should_match_iterable_containing_with_set() {
+        // Arrange
+        Set<Integer> items = new Set<Integer>{ 1, 2, 3 };
+
+        // Act & Assert
+        Assert.isTrue(Mock.iterableContaining(2).matches(items));
+        Assert.isTrue(Mock.iterableContaining(Mock.anyInteger()).matches(items));
+        Assert.isFalse(Mock.iterableContaining(4).matches(items));
+    }
+
+    @IsTest
     static void should_assert_numeric_comparisons() {
         // Act & Assert
         Mock.expect(10).toBeLessThan(20);
+        Mock.expect(10).toBeLt(20);
         Mock.expect(20).toBeGreaterThan(10);
+        Mock.expect(20).toBeGt(10);
+        Mock.expect(10).toBeLessThanOrEqual(10);
+        Mock.expect(10).toBeLessThanOrEqual(20);
+        Mock.expect(10).toBeLe(10);
+        Mock.expect(10).toBeLe(20);
+        Mock.expect(20).toBeGreaterThanOrEqual(20);
+        Mock.expect(20).toBeGreaterThanOrEqual(10);
+        Mock.expect(20).toBeGe(20);
+        Mock.expect(20).toBeGe(10);
         Mock.expect(10).notx.toBeLessThan(5);
+        Mock.expect(10).notx.toBeLt(5);
         Mock.expect(5).notx.toBeGreaterThan(10);
+        Mock.expect(5).notx.toBeGt(10);
+        Mock.expect(10).notx.toBeLessThanOrEqual(5);
+        Mock.expect(10).notx.toBeLe(5);
+        Mock.expect(5).notx.toBeGreaterThanOrEqual(10);
+        Mock.expect(5).notx.toBeGe(10);
 
         try {
             Mock.expect(20).toBeLessThan(10);
@@ -1390,6 +1474,45 @@ private class MockTest {
             Assert.fail('Should fail');
         } catch (Mock.MockException e) {
             Assert.isTrue(e.getMessage().contains('to be greater than 10'));
+        }
+
+        try {
+            Mock.expect(20).toBeLessThanOrEqual(10);
+            Assert.fail('Should fail');
+        } catch (Mock.MockException e) {
+            Assert.isTrue(e.getMessage().contains('less than or equal to 10'));
+        }
+
+        try {
+            Mock.expect(5).toBeGreaterThanOrEqual(10);
+            Assert.fail('Should fail');
+        } catch (Mock.MockException e) {
+            Assert.isTrue(e.getMessage().contains('greater than or equal to 10'));
+        }
+    }
+
+    @IsTest
+    static void should_reject_invalid_numeric_comparison_inputs() {
+        // Act & Assert
+        try {
+            Mock.expect((Object) null).toBeLessThan(1);
+            Assert.fail('Should reject null actual values');
+        } catch (Mock.MockException e) {
+            Assert.isTrue(e.getMessage().contains('numeric actual value'));
+        }
+
+        try {
+            Mock.expect('not numeric').toBeGreaterThan(1);
+            Assert.fail('Should reject non-numeric actual values');
+        } catch (Mock.MockException e) {
+            Assert.isTrue(e.getMessage().contains('numeric actual value'));
+        }
+
+        try {
+            Mock.expect(1).toBeLessThan(null);
+            Assert.fail('Should reject null comparison values');
+        } catch (Mock.MockException e) {
+            Assert.isTrue(e.getMessage().contains('numeric comparison value'));
         }
     }
 

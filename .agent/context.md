@@ -57,12 +57,18 @@ Configure mock behavior using `spyOn`. Support for sequential returns, exception
         .mockThrow(new IllegalArgumentException('Second arg cannot be zero'));
 
     Mock.spyOn(mock, 'add')
+        .whenCalledWith(new List<Object>{ 3, 0 })
+        .mockThrowOnce(new IllegalArgumentException('Throw once'))
+        .mockReturnValue(30);
+
+    Mock.spyOn(mock, 'add')
         .whenCalledWith(new List<Object>{ 10, 20 })
         .mockImplementationOnce(new MyCallback())
         .mockReturnValue(31);
     ```
 
 `whenCalledWith(...)` supports matchers in argument lists and takes precedence over method-level stubs when arguments match.
+Scoped one-time stubs fall back to a scoped default when present; otherwise, consumed scoped once-actions continue to method-level behavior or the default `null` return.
 
 ### 3. Verification
 
@@ -114,7 +120,8 @@ Use `expect(spy).toHaveBeenCalled()` for no-arg verification. For mock-level ver
     Mock.expect(mock).toHaveLastReturnedWith('method', 'ok');
     ```
 
-`toHaveReturned*` assertions count only successful returns. Calls that throw are excluded from returned counts and return-value matching.
+Aggregate return assertions (`toHaveReturned`, `toHaveReturnedTimes`, `toHaveReturnedWith`) count only successful returns.
+Positional return assertions (`toHaveNthReturnedWith`, `toHaveLastReturnedWith`) select from raw call history first, then fail if the selected call threw.
 
 ### 4. Argument Matchers
 
@@ -146,11 +153,12 @@ Mock.sObjectContaining(new Map<SObjectField, Object>{
 Generic assertions for values, eliminating the need for `System.Assert` in many cases.
 
 - `toBe(val)`: Strict reference equality (`===`).
-- `toEqual(val)`: Value/deep equality (`==`).
+- `toEqual(val)` / `toEq(val)`: Value/deep equality (`==`).
 - `toBeTrue()`, `toBeFalse()`, `toBeNull()`
 - `toMatch(regex)`
 - `toContain(item)`
-- `toBeLessThan(val)`, `toBeGreaterThan(val)`
+- `toBeLessThan(val)` / `toBeLt(val)`, `toBeLessThanOrEqual(val)` / `toBeLe(val)`
+- `toBeGreaterThan(val)` / `toBeGt(val)`, `toBeGreaterThanOrEqual(val)` / `toBeGe(val)`
 
 ### 6. Mock Maintenance
 
@@ -200,7 +208,7 @@ List<Id> oppIds = Mock.fakeIds(Opportunity.SObjectType, 3);
 ## Architecture
 
 - **Mock.cls**: The central facade containing all static methods and inner classes (`MethodSpy`, `MockExpectation`, `Matcher`).
-- **MockProvider**: Internal `System.StubProvider` that handles method interception. Uses a `Map` for **O(1)** call history lookups.
+- **MockProvider**: Internal `System.StubProvider` that handles method interception. Uses a `Map` for **O(1)** call history retrieval by method.
     - Supports overload-safe lookup using method signature keys (`methodName(paramType1,paramType2,...)`) with method-name fallback for backward compatibility.
     - Tracks per-call outcomes (`didReturn`, `returnValue`) so return assertions can distinguish successful returns from thrown calls.
 - **Interfaces**:
