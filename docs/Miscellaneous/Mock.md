@@ -1146,6 +1146,16 @@ Asserts value equality (==).
 |---|---|
 |`expected`|The expected value|
 
+##### `public void toEq(Object expected)`
+
+Alias for toEqual().
+
+###### Parameters
+
+|Param|Description|
+|---|---|
+|`expected`|The expected value|
+
 ##### `public void toMatch(String regex)`
 
 Asserts that a value matches the specified regex pattern.
@@ -1198,6 +1208,36 @@ Asserts that the value is less than the specified number.
 |---|---|
 |`value`|The maximum value (exclusive)|
 
+##### `public void toBeLt(Decimal value)`
+
+Alias for toBeLessThan().
+
+###### Parameters
+
+|Param|Description|
+|---|---|
+|`value`|The maximum value (exclusive)|
+
+##### `public void toBeLessThanOrEqual(Decimal value)`
+
+Asserts that the value is less than or equal to the specified number.
+
+###### Parameters
+
+|Param|Description|
+|---|---|
+|`value`|The maximum value (inclusive)|
+
+##### `public void toBeLe(Decimal value)`
+
+Alias for toBeLessThanOrEqual().
+
+###### Parameters
+
+|Param|Description|
+|---|---|
+|`value`|The maximum value (inclusive)|
+
 ##### `public void toBeGreaterThan(Decimal value)`
 
 Asserts that the value is greater than the specified number.
@@ -1207,6 +1247,36 @@ Asserts that the value is greater than the specified number.
 |Param|Description|
 |---|---|
 |`value`|The minimum value (exclusive)|
+
+##### `public void toBeGt(Decimal value)`
+
+Alias for toBeGreaterThan().
+
+###### Parameters
+
+|Param|Description|
+|---|---|
+|`value`|The minimum value (exclusive)|
+
+##### `public void toBeGreaterThanOrEqual(Decimal value)`
+
+Asserts that the value is greater than or equal to the specified number.
+
+###### Parameters
+
+|Param|Description|
+|---|---|
+|`value`|The minimum value (inclusive)|
+
+##### `public void toBeGe(Decimal value)`
+
+Alias for toBeGreaterThanOrEqual().
+
+###### Parameters
+
+|Param|Description|
+|---|---|
+|`value`|The minimum value (inclusive)|
 
 ##### `public MockExpectation toHaveBeenCalled()`
 
@@ -1778,4 +1848,3 @@ Determines if the actual value matches the criteria.
 |`Boolean`|True if the value matches|
 
 ---
-

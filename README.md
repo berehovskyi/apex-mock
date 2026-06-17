@@ -31,7 +31,7 @@ A robust, Jest-inspired mocking library for Salesforce Apex unit tests. `apex-mo
 or install as an Unlocked Package using the CLI:
 
 ```sh pkg::apex-mock
-sf package install -p 04tJ5000000DA2jIAG -o <org-alias> -r -w 10
+sf package install -p 04tJ5000000DA33IAG -o <org-alias> -r -w 10
 ```
 
 ## Features
@@ -40,7 +40,7 @@ sf package install -p 04tJ5000000DA2jIAG -o <org-alias> -r -w 10
 - **Fluent Verification**: Verify method calls with `expect(spy).toHaveBeenCalled()` or `expect(mock).toHaveBeenCalled('methodName')`.
 - **Nested Matchers**: Support for deeply nested argument matchers (`objectContaining`, `anyId`, etc.).
 - **HTTP Mocking**: Native `HttpCalloutMock` support with method and URL-specific responses.
-- **Low Overhead**: Optimized for performance with O(1) call lookup.
+- **Low Overhead**: Optimized with O(1) call-history retrieval by method.
 - **Test Utilities**: Built-in helpers for rapid test data setup.
 - **Exception Testing**: Clean assertions for expected exceptions using `expect(block).toThrow()`.
 
@@ -102,6 +102,7 @@ When stubbing overloaded methods, prefer `spyOn(stub, methodName, parameterTypes
 
 > [!NOTE]
 > **Stub precedence:** argument-scoped stubs (`whenCalledWith(...)`) take precedence over method-level stubs. Among method-level stubs, precedence is `mockThrow(...)` → `mockImplementation(...)` → `mockReturnValueOnce(...)` → `mockReturnValue(...)`.
+> Scoped one-time stubs fall back to the scoped default when present; otherwise, after the one-time action is consumed, matching calls continue to method-level behavior or the default `null` return.
 
 **Available Stubbing:**
 
@@ -112,6 +113,7 @@ When stubbing overloaded methods, prefer `spyOn(stub, methodName, parameterTypes
 | `mockThrow(exception)`         | Configures the method to throw the specified exception when called.                  |
 | `mockImplementation(callback)` | Configures a dynamic implementation using the `Mock.Callback` interface.             |
 | `whenCalledWith(args)`         | Starts argument-scoped stubbing for a specific argument pattern (supports matchers). |
+| `mockThrowOnce(exception)`     | On `whenCalledWith(...)`, configures a one-time exception for that argument scope.   |
 | `mockImplementationOnce(cb)`   | On `whenCalledWith(...)`, configures a one-time callback for that argument scope.    |
 
 ### Verification
@@ -164,7 +166,8 @@ Mock.expect(objectSpy).toHaveBeenCalledTimes(1);
 
 > [!NOTE]
 > All verifications support negation via the `.notx` property.
-> `toHaveReturned*` assertions count only successful returns (calls that throw are excluded).
+> Aggregate return verifications (`toHaveReturned`, `toHaveReturnedTimes`, `toHaveReturnedWith`) consider only successful returns.
+> Positional return verifications (`toHaveNthReturnedWith`, `toHaveLastReturnedWith`) select from raw call history first, then fail if the selected call threw.
 
 ### Value Assertions
 
@@ -182,22 +185,25 @@ Mock.expect(myList).toContain(Mock.stringContaining('Success'));
 // Equality
 Mock.expect(obj).toBe(objRef); // Strict reference equality (===)
 Mock.expect(obj).toEqual(otherObj); // Value equality (==)
+Mock.expect(obj).toEq(otherObj); // Compact alias for value equality
 ```
 
 **Available Assertions:**
 
-| Assertion              | Description                                                                 |
-| :--------------------- | :-------------------------------------------------------------------------- |
-| `toBe(val)`            | Asserts strict reference equality (`===`).                                  |
-| `toEqual(val)`         | Asserts value equality (`==`).                                              |
-| `toMatch(matcher)`     | Asserts that a value matches the criteria of a `Mock.Matcher`.              |
-| `toMatch(regex)`       | Asserts that a string matches the specified regular expression.             |
-| `toContain(item)`      | Asserts that a List/Set or String contains the specified item (or matcher). |
-| `toBeNull()`           | Asserts that the value is `null`.                                           |
-| `toBeTrue()`           | Asserts that the value is exactly `true`.                                   |
-| `toBeFalse()`          | Asserts that the value is exactly `false`.                                  |
-| `toBeLessThan(num)`    | Asserts that the numeric value is less than the specified amount.           |
-| `toBeGreaterThan(num)` | Asserts that the numeric value is greater than the specified amount.        |
+| Assertion                                     | Description                                                                 |
+| :-------------------------------------------- | :-------------------------------------------------------------------------- |
+| `toBe(val)`                                   | Asserts strict reference equality (`===`).                                  |
+| `toEqual(val)` / `toEq(val)`                  | Asserts value equality (`==`).                                              |
+| `toMatch(matcher)`                            | Asserts that a value matches the criteria of a `Mock.Matcher`.              |
+| `toMatch(regex)`                              | Asserts that a string matches the specified regular expression.             |
+| `toContain(item)`                             | Asserts that a List/Set or String contains the specified item (or matcher). |
+| `toBeNull()`                                  | Asserts that the value is `null`.                                           |
+| `toBeTrue()`                                  | Asserts that the value is exactly `true`.                                   |
+| `toBeFalse()`                                 | Asserts that the value is exactly `false`.                                  |
+| `toBeLessThan(num)` / `toBeLt(num)`           | Asserts that the numeric value is less than the specified amount.           |
+| `toBeLessThanOrEqual(num)` / `toBeLe(num)`    | Asserts that the numeric value is less than or equal to the amount.         |
+| `toBeGreaterThan(num)` / `toBeGt(num)`        | Asserts that the numeric value is greater than the specified amount.        |
+| `toBeGreaterThanOrEqual(num)` / `toBeGe(num)` | Asserts that the numeric value is greater than or equal to the amount.      |
 
 **Available Matchers:**
 
@@ -285,7 +291,7 @@ This library implements a facade pattern over the `System.StubProvider` interfac
 
 - **Mock.cls**: The primary entry point containing static methods and inner classes (`MethodSpy`, `MockExpectation`, `Matcher`).
 - **MockProvider**: The internal handler for method interception and call recording.
-- **Performance**: Call history uses `Map<String, List<MethodCall>>` for O(1) retrieval, ensuring verifications remain performant even with high call volumes.
+- **Performance**: Call history uses `Map<String, List<MethodCall>>` for O(1) retrieval by method; verifications scan the selected method's history.
 
 ## Limitations
 

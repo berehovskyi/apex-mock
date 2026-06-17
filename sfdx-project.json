@@ -4,14 +4,13 @@
             "path": "sfdx-source/apex-mock",
             "package": "apex-mock",
             "versionName": "ver 0.2",
-            "versionNumber": "0.2.1.NEXT",
+            "versionNumber": "0.2.2.NEXT",
             "default": true
         }
     ],
     "name": "apex-mock",
-    "namespace": "",
     "packageAliases": {
         "apex-mock": "0HoJ5000000001xKAA",
-        "apex-mock@latest": "04tJ5000000DA2jIAG"
+        "apex-mock@latest": "04tJ5000000DA33IAG"
     }
 }
